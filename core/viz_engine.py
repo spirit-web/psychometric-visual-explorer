@@ -210,3 +210,30 @@ def scree_plot_chart(actual_eigenvalues, simulated_eigenvalues) -> go.Figure:
         **_LAYOUT_DEFAULTS,
     )
     return fig
+
+
+def normal_curve_chart(x, y, marker_x: float | None, marker_label: str, x_title: str, ci: tuple[float, float] | None = None) -> go.Figure:
+    fig = go.Figure(go.Scatter(x=x, y=y, mode="lines", fill="tozeroy", line=dict(color=COLOR_PRIMARY), fillcolor="rgba(47,95,224,0.15)"))
+    if ci is not None:
+        lo, hi = ci
+        fig.add_vrect(x0=lo, x1=hi, fillcolor=COLOR_WARNING, opacity=0.12, line_width=0)
+    if marker_x is not None:
+        fig.add_vline(x=marker_x, line_color=COLOR_WARNING, line_dash="dash", annotation_text=marker_label)
+    fig.update_layout(xaxis_title=x_title, yaxis_title="Täthet", height=340, **_LAYOUT_DEFAULTS)
+    return fig
+
+
+def ci_error_bar_chart(labels: list, centers: list[float], lowers: list[float], uppers: list[float], y_title: str) -> go.Figure:
+    errors_plus = [u - c for u, c in zip(uppers, centers)]
+    errors_minus = [c - l for c, l in zip(centers, lowers)]
+    fig = go.Figure(
+        go.Scatter(
+            x=list(labels),
+            y=centers,
+            mode="markers",
+            marker=dict(color=COLOR_PRIMARY, size=9),
+            error_y=dict(type="data", symmetric=False, array=errors_plus, arrayminus=errors_minus, color=COLOR_PRIMARY),
+        )
+    )
+    fig.update_layout(yaxis_title=y_title, height=380, **_LAYOUT_DEFAULTS)
+    return fig

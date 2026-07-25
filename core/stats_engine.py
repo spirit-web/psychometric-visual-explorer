@@ -913,3 +913,223 @@ def validity_status_counts(sources: list[ValiditySource]) -> dict[str, int]:
     for source in sources:
         counts[source.status] += 1
     return counts
+
+
+# --- norms -------------------------------------------------
+
+# Standard normal stanine cut-points (9-band scale with the classic
+# 4/7/12/17/20/17/12/7/4 % distribution).
+STANINE_Z_CUTS = [-1.75, -1.25, -0.75, -0.25, 0.25, 0.75, 1.25, 1.75]
+
+
+@dataclass
+class NormStats:
+    mean: float | None
+    sd: float | None
+    n: int
+
+
+def norm_stats(dataset, subscale_id: str | None = None) -> NormStats:
+    """Sample-based normative reference: this demo dataset doubles as its own
+    normative sample (no external population norm data exists for synthetic
+    data). Documented explicitly in the UI, not just here."""
+    series = total_score_series(dataset, subscale_id).dropna()
+    if len(series) == 0:
+        return NormStats(None, None, 0)
+    return NormStats(float(series.mean()), float(series.std()), len(series))
+
+
+def raw_to_z(raw: float, mean: float, sd: float) -> float:
+    return (raw - mean) / sd if sd else 0.0
+
+
+def z_to_t(z: float) -> float:
+    return 50 + 10 * z
+
+
+def z_to_percentile(z: float) -> float:
+    from scipy.stats import norm as _norm
+
+    return float(_norm.cdf(z) * 100)
+
+
+def z_to_stanine(z: float) -> int:
+    return int(np.digitize(z, STANINE_Z_CUTS) + 1)
+
+
+@dataclass
+class ScoreConversion:
+    raw: float
+    z: float
+    t: float
+    percentile: float
+    stanine: int
+
+
+def score_conversion(raw: float, mean: float, sd: float) -> ScoreConversion:
+    z = raw_to_z(raw, mean, sd)
+    return ScoreConversion(raw, z, z_to_t(z), z_to_percentile(z), z_to_stanine(z))
+
+
+def conversion_table(dataset, subscale_id: str | None = None) -> pd.DataFrame:
+    """Raw -> z -> T -> percentile -> stanine for every possible raw score in
+    the subscale's range (not just observed scores) - a reference table."""
+    q = dataset.questionnaire
+    subscale = q.get_subscale(subscale_id) if subscale_id else (q.subscales[0] if q.subscales else None)
+    stats = norm_stats(dataset, subscale_id)
+    if subscale is None or stats.mean is None or stats.sd is None or stats.sd == 0:
+        return pd.DataFrame()
+
+    lo, hi = subscale.score_range
+    rows = []
+    for raw in range(int(lo), int(hi) + 1):
+        c = score_conversion(raw, stats.mean, stats.sd)
+        rows.append(
+            {
+                "Råpoäng": c.raw,
+                "Z-poäng": round(c.z, 2),
+                "T-poäng": round(c.t, 1),
+                "Percentil": round(c.percentile, 1),
+                "Stanine": c.stanine,
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def person_ids(dataset) -> list:
+    if "respondent_id" in dataset.raw.columns:
+        return dataset.raw["respondent_id"].tolist()
+    return list(dataset.raw.index)
+
+
+def person_raw_score(dataset, person_id, subscale_id: str | None = None) -> float | None:
+    q = dataset.questionnaire
+    subscale = q.get_subscale(subscale_id) if subscale_id else (q.subscales[0] if q.subscales else None)
+    if subscale is None:
+        return None
+    col = f"{subscale.id}_total"
+    if col not in dataset.scored.columns:
+        return None
+
+    if "respondent_id" in dataset.raw.columns:
+        mask = dataset.raw["respondent_id"] == person_id
+        if not mask.any():
+            return None
+        idx = dataset.raw.index[mask][0]
+    else:
+        idx = person_id
+
+    if idx not in dataset.scored.index:
+        return None
+    val = dataset.scored.loc[idx, col]
+    return float(val) if pd.notna(val) else None
+
+
+def normal_curve_points(mean: float, sd: float, n: int = 200, span: float = 4.0) -> tuple[np.ndarray, np.ndarray]:
+    from scipy.stats import norm as _norm
+
+    if sd is None or sd <= 0:
+        return np.array([]), np.array([])
+    x = np.linspace(mean - span * sd, mean + span * sd, n)
+    y = _norm.pdf(x, mean, sd)
+    return x, y
+
+
+# --- measurement error -------------------------------------------------
+
+
+@dataclass
+class MeasurementError:
+    sem: float | None
+    alpha: float | None
+    sd: float | None
+
+
+def measurement_error(dataset, subscale_id: str | None = None) -> MeasurementError:
+    """SEM = SD * sqrt(1 - alpha) (classical test theory)."""
+    alpha = reliability_snapshot(dataset, subscale_id).alpha
+    stats = norm_stats(dataset, subscale_id)
+    if alpha is None or stats.sd is None:
+        return MeasurementError(None, alpha, stats.sd)
+    sem = stats.sd * np.sqrt(max(0.0, 1 - alpha))
+    return MeasurementError(float(sem), alpha, stats.sd)
+
+
+def confidence_interval(raw_score: float, sem: float, z: float = 1.96) -> tuple[float, float]:
+    """95% CI = score ± 1.96*SEM by default (the conventional psychometrics
+    approximation; scipy's exact z_0.975 is 1.9600 to 4 decimal places, so
+    the literal constant is used directly rather than recomputed)."""
+    margin = z * sem
+    return raw_score - margin, raw_score + margin
+
+
+def all_person_confidence_intervals(dataset, subscale_id: str | None = None) -> pd.DataFrame:
+    """95% CI = score ± 1.96*SEM for every respondent - the per-person table
+    used by Measurement Error's confidence-interval tab."""
+    me = measurement_error(dataset, subscale_id)
+    if me.sem is None:
+        return pd.DataFrame()
+    series = total_score_series(dataset, subscale_id).dropna()
+    id_col = dataset.raw["respondent_id"] if "respondent_id" in dataset.raw.columns else None
+
+    rows = []
+    for idx, score in series.items():
+        lo, hi = confidence_interval(float(score), me.sem)
+        label = str(id_col.loc[idx]) if id_col is not None and idx in id_col.index else str(idx)
+        rows.append(
+            {
+                "Person": label,
+                "Observerad poäng": score,
+                "SEM": round(me.sem, 2),
+                "95% KI nedre": round(lo, 1),
+                "95% KI övre": round(hi, 1),
+                "Intervall (±)": round(1.96 * me.sem, 1),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def minimum_reliable_change(sem: float) -> float:
+    """The smallest score difference that counts as reliable change at the
+    95% level (Jacobson & Truax, 1991): 1.96 * SE_diff, SE_diff = SEM*sqrt(2)."""
+    return 1.96 * np.sqrt(2) * sem
+
+
+def precision_label(sem: float | None, sd: float | None) -> str:
+    if sem is None or sd is None or sd == 0:
+        return "Okänd"
+    ratio = sem / sd
+    if ratio < 0.35:
+        return "Hög"
+    if ratio < 0.5:
+        return "Måttlig"
+    return "Låg"
+
+
+@dataclass
+class ReliableChangeResult:
+    person_id: str
+    score_t1: float
+    score_t2: float
+    diff: float
+    se_diff: float
+    rci: float
+    reliable: bool
+
+
+def reliable_change_index(dataset, subscale_id: str | None = None) -> list[ReliableChangeResult]:
+    """RCI for every respondent who completed the simulated retest wave,
+    using the same t1/t2 pairs as Reliability Explorer's test-retest tab."""
+    me = measurement_error(dataset, subscale_id)
+    if me.sem is None or me.sem == 0:
+        return []
+    se_diff = me.sem * np.sqrt(2)
+    t1, t2 = test_retest_paired_scores(dataset, subscale_id)
+    id_col = dataset.raw["respondent_id"] if "respondent_id" in dataset.raw.columns else None
+    results = []
+    for idx in t1.index:
+        diff = float(t2[idx] - t1[idx])
+        rci = diff / se_diff
+        label = str(id_col.loc[idx]) if id_col is not None else str(idx)
+        results.append(ReliableChangeResult(label, float(t1[idx]), float(t2[idx]), diff, se_diff, rci, abs(rci) >= 1.96))
+    return results
