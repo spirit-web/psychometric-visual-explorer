@@ -1,0 +1,53 @@
+{
+  "plugin_id": "phq9",
+  "plugin_version": "1.0",
+  "test_name": "PHQ-9",
+  "full_name": "Patient Health Questionnaire-9",
+  "language": "sv",
+  "response_scale": {
+    "type": "likert",
+    "min": 0,
+    "max": 3,
+    "labels": {
+      "0": "Inte alls",
+      "1": "Flera dagar",
+      "2": "Mer än halva dagarna",
+      "3": "Nästan varje dag"
+    },
+    "prompt": "Under de senaste 2 veckorna, hur ofta har du besvärats av något av följande problem?"
+  },
+  "items": [
+    {"id": "PHQ9_1", "text": "Litet intresse eller glädje av att göra saker", "subscale": "depression_total", "reverse_scored": false},
+    {"id": "PHQ9_2", "text": "Känt dig nedstämd, deprimerad eller hopplös", "subscale": "depression_total", "reverse_scored": false},
+    {"id": "PHQ9_3", "text": "Svårt att somna, svårt att sova eller sovit för mycket", "subscale": "depression_total", "reverse_scored": false},
+    {"id": "PHQ9_4", "text": "Känt dig trött eller haft lite energi", "subscale": "depression_total", "reverse_scored": false},
+    {"id": "PHQ9_5", "text": "Dålig aptit eller ätit för mycket", "subscale": "depression_total", "reverse_scored": false},
+    {"id": "PHQ9_6", "text": "Känt dig dålig om dig själv, eller att du är ett misslyckande eller har gjort dig själv eller din familj besviken", "subscale": "depression_total", "reverse_scored": false},
+    {"id": "PHQ9_7", "text": "Svårt att koncentrera dig på saker, t.ex. läsa tidningen eller titta på TV", "subscale": "depression_total", "reverse_scored": false},
+    {"id": "PHQ9_8", "text": "Rört dig eller talat så långsamt att andra kunnat lägga märke till det, eller motsatsen - varit så rastlös att du rört dig mycket mer än vanligt", "subscale": "depression_total", "reverse_scored": false},
+    {"id": "PHQ9_9", "text": "Tankar på att du skulle vara bättre död eller att skada dig själv på något sätt", "subscale": "depression_total", "reverse_scored": false}
+  ],
+  "subscales": [
+    {
+      "id": "depression_total",
+      "name": "Depression (Total)",
+      "item_ids": ["PHQ9_1", "PHQ9_2", "PHQ9_3", "PHQ9_4", "PHQ9_5", "PHQ9_6", "PHQ9_7", "PHQ9_8", "PHQ9_9"],
+      "score_range": [0, 27],
+      "scoring_method": "sum"
+    }
+  ],
+  "cutoffs": [
+    {"label": "Minimal", "range": [0, 4]},
+    {"label": "Lindrig", "range": [5, 9]},
+    {"label": "Måttlig", "range": [10, 14]},
+    {"label": "Måttlig till svår", "range": [15, 19]},
+    {"label": "Svår", "range": [20, 27]}
+  ],
+  "norm_reference": {
+    "population": "Svensk primärvårdspopulation 18-65 år",
+    "sample_size": 950,
+    "standardization_year": 2019,
+    "note": "Simulerad normdata för demonstrationssyfte."
+  },
+  "source_citation": "Kroenke K, Spitzer RL, Williams JB. The PHQ-9: validity of a brief depression severity measure. J Gen Intern Med. 2001."
+}

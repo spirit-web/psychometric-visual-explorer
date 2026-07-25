@@ -1,0 +1,50 @@
+{
+  "plugin_id": "gad7",
+  "plugin_version": "1.0",
+  "test_name": "GAD-7",
+  "full_name": "Generalized Anxiety Disorder-7",
+  "language": "sv",
+  "response_scale": {
+    "type": "likert",
+    "min": 0,
+    "max": 3,
+    "labels": {
+      "0": "Inte alls",
+      "1": "Några dagar",
+      "2": "Mer än halva dagarna",
+      "3": "Nästan varje dag"
+    },
+    "prompt": "Under de senaste 2 veckorna, hur ofta har du besvärats av något av följande?"
+  },
+  "items": [
+    {"id": "GAD7_1", "text": "Känner dig nervös, ängslig eller på helspänn?", "subscale": "anxiety_total", "reverse_scored": false},
+    {"id": "GAD7_2", "text": "Oroar du dig för mycket om olika saker?", "subscale": "anxiety_total", "reverse_scored": false},
+    {"id": "GAD7_3", "text": "Svårt att slappna av?", "subscale": "anxiety_total", "reverse_scored": false},
+    {"id": "GAD7_4", "text": "Så rastlös att det är svårt att sitta stilla?", "subscale": "anxiety_total", "reverse_scored": false},
+    {"id": "GAD7_5", "text": "Blir lätt irriterad eller lättretlig?", "subscale": "anxiety_total", "reverse_scored": false},
+    {"id": "GAD7_6", "text": "Känner dig rädd som att något fruktansvärt kan hända?", "subscale": "anxiety_total", "reverse_scored": false},
+    {"id": "GAD7_7", "text": "Så mycket ångest att det är svårt att göra något?", "subscale": "anxiety_total", "reverse_scored": false}
+  ],
+  "subscales": [
+    {
+      "id": "anxiety_total",
+      "name": "Ångest (Total)",
+      "item_ids": ["GAD7_1", "GAD7_2", "GAD7_3", "GAD7_4", "GAD7_5", "GAD7_6", "GAD7_7"],
+      "score_range": [0, 21],
+      "scoring_method": "sum"
+    }
+  ],
+  "cutoffs": [
+    {"label": "Minimal", "range": [0, 4]},
+    {"label": "Lindrig", "range": [5, 9]},
+    {"label": "Måttlig", "range": [10, 14]},
+    {"label": "Svår", "range": [15, 21]}
+  ],
+  "norm_reference": {
+    "population": "Svensk population 18-65 år",
+    "sample_size": 1842,
+    "standardization_year": 2020,
+    "note": "Simulerad normdata för demonstrationssyfte."
+  },
+  "source_citation": "Spitzer RL, Kroenke K, Williams JB, Löwe B. A brief measure for assessing generalized anxiety disorder: the GAD-7. Arch Intern Med. 2006."
+}

@@ -1,0 +1,437 @@
+{
+  "plugin_id": "ipip_bigfive",
+  "plugin_version": "1.0",
+  "test_name": "IPIP Big Five",
+  "full_name": "International Personality Item Pool - Big Five Factor Markers",
+  "language": "sv",
+  "response_scale": {
+    "type": "likert",
+    "min": 1,
+    "max": 5,
+    "labels": {
+      "1": "Stämmer inte alls",
+      "2": "Stämmer ganska dåligt",
+      "3": "Varken eller",
+      "4": "Stämmer ganska bra",
+      "5": "Stämmer helt"
+    },
+    "prompt": "Ange hur väl varje påstående stämmer in på dig."
+  },
+  "items": [
+    {
+      "id": "BFI_E1",
+      "text": "Är livet och själen på festen.",
+      "subscale": "E",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_E2",
+      "text": "Pratar inte mycket.",
+      "subscale": "E",
+      "reverse_scored": true
+    },
+    {
+      "id": "BFI_E3",
+      "text": "Känner mig bekväm bland människor.",
+      "subscale": "E",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_E4",
+      "text": "Håller mig i bakgrunden.",
+      "subscale": "E",
+      "reverse_scored": true
+    },
+    {
+      "id": "BFI_E5",
+      "text": "Startar konversationer.",
+      "subscale": "E",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_E6",
+      "text": "Har lite att säga.",
+      "subscale": "E",
+      "reverse_scored": true
+    },
+    {
+      "id": "BFI_E7",
+      "text": "Pratar med många olika människor på fester.",
+      "subscale": "E",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_E8",
+      "text": "Tycker inte om att dra uppmärksamhet till mig själv.",
+      "subscale": "E",
+      "reverse_scored": true
+    },
+    {
+      "id": "BFI_E9",
+      "text": "Har inget emot att vara i centrum av uppmärksamheten.",
+      "subscale": "E",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_E10",
+      "text": "Är tystlåten bland främlingar.",
+      "subscale": "E",
+      "reverse_scored": true
+    },
+    {
+      "id": "BFI_A1",
+      "text": "Bryr mig lite om andra.",
+      "subscale": "A",
+      "reverse_scored": true
+    },
+    {
+      "id": "BFI_A2",
+      "text": "Är intresserad av människor.",
+      "subscale": "A",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_A3",
+      "text": "Förolämpar människor.",
+      "subscale": "A",
+      "reverse_scored": true
+    },
+    {
+      "id": "BFI_A4",
+      "text": "Känner medkänsla med andras känslor.",
+      "subscale": "A",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_A5",
+      "text": "Är inte intresserad av andra människors problem.",
+      "subscale": "A",
+      "reverse_scored": true
+    },
+    {
+      "id": "BFI_A6",
+      "text": "Har ett varmt hjärta.",
+      "subscale": "A",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_A7",
+      "text": "Är egentligen inte intresserad av andra.",
+      "subscale": "A",
+      "reverse_scored": true
+    },
+    {
+      "id": "BFI_A8",
+      "text": "Tar mig tid för andra.",
+      "subscale": "A",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_A9",
+      "text": "Känner andras känslor.",
+      "subscale": "A",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_A10",
+      "text": "Får människor att känna sig bekväma.",
+      "subscale": "A",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_C1",
+      "text": "Är alltid förberedd.",
+      "subscale": "C",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_C2",
+      "text": "Lämnar mina saker huller om buller.",
+      "subscale": "C",
+      "reverse_scored": true
+    },
+    {
+      "id": "BFI_C3",
+      "text": "Är uppmärksam på detaljer.",
+      "subscale": "C",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_C4",
+      "text": "Ställer till med oreda.",
+      "subscale": "C",
+      "reverse_scored": true
+    },
+    {
+      "id": "BFI_C5",
+      "text": "Gör sysslor direkt.",
+      "subscale": "C",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_C6",
+      "text": "Glömmer ofta att lägga tillbaka saker på sin plats.",
+      "subscale": "C",
+      "reverse_scored": true
+    },
+    {
+      "id": "BFI_C7",
+      "text": "Gillar ordning.",
+      "subscale": "C",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_C8",
+      "text": "Undviker mina plikter.",
+      "subscale": "C",
+      "reverse_scored": true
+    },
+    {
+      "id": "BFI_C9",
+      "text": "Följer ett schema.",
+      "subscale": "C",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_C10",
+      "text": "Är noggrann i mitt arbete.",
+      "subscale": "C",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_N1",
+      "text": "Blir lätt stressad.",
+      "subscale": "N",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_N2",
+      "text": "Är avslappnad större delen av tiden.",
+      "subscale": "N",
+      "reverse_scored": true
+    },
+    {
+      "id": "BFI_N3",
+      "text": "Oroar mig för saker.",
+      "subscale": "N",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_N4",
+      "text": "Känner mig sällan nedstämd.",
+      "subscale": "N",
+      "reverse_scored": true
+    },
+    {
+      "id": "BFI_N5",
+      "text": "Blir lätt störd.",
+      "subscale": "N",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_N6",
+      "text": "Blir lätt upprörd.",
+      "subscale": "N",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_N7",
+      "text": "Ändrar humör ofta.",
+      "subscale": "N",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_N8",
+      "text": "Har täta humörsvängningar.",
+      "subscale": "N",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_N9",
+      "text": "Blir lätt irriterad.",
+      "subscale": "N",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_N10",
+      "text": "Känner mig ofta nedstämd.",
+      "subscale": "N",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_O1",
+      "text": "Har ett rikt ordförråd.",
+      "subscale": "O",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_O2",
+      "text": "Har svårt att förstå abstrakta idéer.",
+      "subscale": "O",
+      "reverse_scored": true
+    },
+    {
+      "id": "BFI_O3",
+      "text": "Har en livlig fantasi.",
+      "subscale": "O",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_O4",
+      "text": "Är inte intresserad av abstrakta idéer.",
+      "subscale": "O",
+      "reverse_scored": true
+    },
+    {
+      "id": "BFI_O5",
+      "text": "Har utmärkta idéer.",
+      "subscale": "O",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_O6",
+      "text": "Har inte en bra fantasi.",
+      "subscale": "O",
+      "reverse_scored": true
+    },
+    {
+      "id": "BFI_O7",
+      "text": "Är snabb att förstå saker.",
+      "subscale": "O",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_O8",
+      "text": "Använder svåra ord.",
+      "subscale": "O",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_O9",
+      "text": "Ägnar tid åt att reflektera över saker.",
+      "subscale": "O",
+      "reverse_scored": false
+    },
+    {
+      "id": "BFI_O10",
+      "text": "Är full av idéer.",
+      "subscale": "O",
+      "reverse_scored": false
+    }
+  ],
+  "subscales": [
+    {
+      "id": "E",
+      "name": "Extraversion",
+      "item_ids": [
+        "BFI_E1",
+        "BFI_E2",
+        "BFI_E3",
+        "BFI_E4",
+        "BFI_E5",
+        "BFI_E6",
+        "BFI_E7",
+        "BFI_E8",
+        "BFI_E9",
+        "BFI_E10"
+      ],
+      "score_range": [
+        10,
+        50
+      ],
+      "scoring_method": "sum"
+    },
+    {
+      "id": "A",
+      "name": "Vänlighet",
+      "item_ids": [
+        "BFI_A1",
+        "BFI_A2",
+        "BFI_A3",
+        "BFI_A4",
+        "BFI_A5",
+        "BFI_A6",
+        "BFI_A7",
+        "BFI_A8",
+        "BFI_A9",
+        "BFI_A10"
+      ],
+      "score_range": [
+        10,
+        50
+      ],
+      "scoring_method": "sum"
+    },
+    {
+      "id": "C",
+      "name": "Samvetsgrannhet",
+      "item_ids": [
+        "BFI_C1",
+        "BFI_C2",
+        "BFI_C3",
+        "BFI_C4",
+        "BFI_C5",
+        "BFI_C6",
+        "BFI_C7",
+        "BFI_C8",
+        "BFI_C9",
+        "BFI_C10"
+      ],
+      "score_range": [
+        10,
+        50
+      ],
+      "scoring_method": "sum"
+    },
+    {
+      "id": "N",
+      "name": "Neuroticism",
+      "item_ids": [
+        "BFI_N1",
+        "BFI_N2",
+        "BFI_N3",
+        "BFI_N4",
+        "BFI_N5",
+        "BFI_N6",
+        "BFI_N7",
+        "BFI_N8",
+        "BFI_N9",
+        "BFI_N10"
+      ],
+      "score_range": [
+        10,
+        50
+      ],
+      "scoring_method": "sum"
+    },
+    {
+      "id": "O",
+      "name": "Öppenhet",
+      "item_ids": [
+        "BFI_O1",
+        "BFI_O2",
+        "BFI_O3",
+        "BFI_O4",
+        "BFI_O5",
+        "BFI_O6",
+        "BFI_O7",
+        "BFI_O8",
+        "BFI_O9",
+        "BFI_O10"
+      ],
+      "score_range": [
+        10,
+        50
+      ],
+      "scoring_method": "sum"
+    }
+  ],
+  "cutoffs": [],
+  "norm_reference": {
+    "population": "Svensk vuxenpopulation 18-65 år",
+    "sample_size": 1200,
+    "standardization_year": 2021,
+    "note": "Simulerad normdata för demonstrationssyfte."
+  },
+  "source_citation": "Goldberg LR. The development of markers for the Big-Five factor structure. Psychological Assessment. 1992."
+}
