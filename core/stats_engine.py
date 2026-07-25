@@ -599,3 +599,317 @@ def quality_summary(dataset) -> QualitySummary:
         status, message = "good", "Inga allvarliga problem funna."
 
     return QualitySummary(checks, n_flagged, patterns, completeness, miss, status, message)
+
+
+# --- factor analysis -------------------------------------------------
+
+
+def eigenvalues_for_scree(dataset, subscale_id: str | None = None) -> np.ndarray:
+    cols = _subscale_item_columns(dataset, subscale_id)
+    data = dataset.scored[cols].dropna()
+    if len(cols) < 2 or len(data) < 3:
+        return np.array([])
+    corr = data.corr().values
+    return np.linalg.eigvalsh(corr)[::-1]
+
+
+@dataclass
+class ParallelAnalysisResult:
+    eigenvalues: np.ndarray
+    simulated_eigenvalues: np.ndarray
+    suggested_n_factors: int
+
+
+def parallel_analysis(dataset, subscale_id: str | None = None, n_iter: int = 50, seed: int = 42) -> ParallelAnalysisResult:
+    """Horn's parallel analysis: compares the actual eigenvalues against the
+    mean eigenvalues from many random (uncorrelated) datasets of the same
+    shape. Factors are retained where the actual eigenvalue exceeds the
+    random-data eigenvalue at that position."""
+    cols = _subscale_item_columns(dataset, subscale_id)
+    data = dataset.scored[cols].dropna()
+    n, p = data.shape
+    if p < 2 or n < 3:
+        return ParallelAnalysisResult(np.array([]), np.array([]), 0)
+
+    actual = eigenvalues_for_scree(dataset, subscale_id)
+    rng = np.random.default_rng(seed)
+    simulated = np.empty((n_iter, p))
+    for i in range(n_iter):
+        random_data = rng.normal(size=(n, p))
+        simulated[i] = np.linalg.eigvalsh(np.corrcoef(random_data, rowvar=False))[::-1]
+    simulated_mean = simulated.mean(axis=0)
+    suggested = max(int(np.sum(actual > simulated_mean)), 1)
+    return ParallelAnalysisResult(actual, simulated_mean, suggested)
+
+
+@dataclass
+class EFAFitIndices:
+    chi2: float | None
+    df: int | None
+    rmsea: float | None
+    cfi: float | None
+    tli: float | None
+    srmr: float | None
+
+
+def _ml_discrepancy(sigma_hat: np.ndarray, sample_corr: np.ndarray, p: int) -> float | None:
+    """F_ML(Sigma, S) = log|Sigma| + tr(Sigma^-1 S) - log|S| - p."""
+    sign_hat, logdet_hat = np.linalg.slogdet(sigma_hat)
+    sign_s, logdet_s = np.linalg.slogdet(sample_corr)
+    if sign_hat <= 0 or sign_s <= 0:
+        return None
+    try:
+        sigma_hat_inv = np.linalg.inv(sigma_hat)
+    except np.linalg.LinAlgError:
+        return None
+    return float(logdet_hat + np.trace(sigma_hat_inv @ sample_corr) - logdet_s - p)
+
+
+def _efa_fit_indices(sample_corr: np.ndarray, loadings: np.ndarray, uniquenesses: np.ndarray, n: int, p: int, k: int) -> EFAFitIndices:
+    """RMSEA/CFI/TLI/SRMR for a maximum-likelihood EFA solution, computed
+    against a k=0 (independence) baseline model - the standard SEM approach
+    (Hu & Bentler, 1999) applied to an EFA loadings solution."""
+    df = ((p - k) ** 2 - (p + k)) // 2
+    if df <= 0:
+        return EFAFitIndices(None, None, None, None, None, None)
+
+    sigma_hat = loadings @ loadings.T + np.diag(uniquenesses)
+    f_ml = _ml_discrepancy(sigma_hat, sample_corr, p)
+    if f_ml is None:
+        return EFAFitIndices(None, df, None, None, None, None)
+    chi2 = max(0.0, (n - 1) * f_ml)
+
+    sign_s, logdet_s = np.linalg.slogdet(sample_corr)
+    if sign_s <= 0:
+        return EFAFitIndices(chi2, df, None, None, None, None)
+    df0 = p * (p - 1) // 2
+    chi2_0 = max(0.0, -(n - 1) * logdet_s)
+
+    rmsea = float(np.sqrt(max(0.0, chi2 - df) / (df * (n - 1))))
+
+    residual = sample_corr - sigma_hat
+    off_diag = residual[~np.eye(p, dtype=bool)]
+    srmr = float(np.sqrt(np.mean(off_diag**2)))
+
+    ratio_0 = chi2_0 / df0 if df0 > 0 else None
+    ratio_k = chi2 / df
+    tli = float((ratio_0 - ratio_k) / (ratio_0 - 1)) if ratio_0 and ratio_0 != 1 else None
+
+    denom = max(chi2_0 - df0, chi2 - df, 1e-9)
+    cfi = float(1 - max(chi2 - df, 0) / denom)
+
+    return EFAFitIndices(chi2, df, rmsea, cfi, tli, srmr)
+
+
+@dataclass
+class EFAResult:
+    n_factors: int
+    n: int
+    loadings: pd.DataFrame
+    communalities: pd.Series
+    variance_explained: pd.DataFrame
+    phi: pd.DataFrame | None
+    fit: EFAFitIndices
+
+
+@dataclass
+class SamplingAdequacy:
+    kmo: float | None
+    bartlett_chi2: float | None
+    bartlett_p: float | None
+
+
+def sampling_adequacy(dataset, subscale_id: str | None = None) -> SamplingAdequacy:
+    """Kaiser-Meyer-Olkin (sampling adequacy) and Bartlett's test of
+    sphericity - standard checks that the item correlation matrix is
+    suitable for factor analysis at all."""
+    from core._compat import patch_factor_analyzer
+
+    patch_factor_analyzer()
+    from factor_analyzer.factor_analyzer import calculate_bartlett_sphericity, calculate_kmo
+
+    cols = _subscale_item_columns(dataset, subscale_id)
+    data = dataset.scored[cols].dropna()
+    if len(cols) < 3 or len(data) < 10:
+        return SamplingAdequacy(None, None, None)
+    try:
+        _, kmo_model = calculate_kmo(data)
+        chi2, p = calculate_bartlett_sphericity(data)
+    except Exception:
+        return SamplingAdequacy(None, None, None)
+    return SamplingAdequacy(float(kmo_model), float(chi2), float(p))
+
+
+def efa_fit(dataset, n_factors: int, subscale_id: str | None = None) -> EFAResult | None:
+    """Exploratory factor analysis (maximum likelihood extraction; promax
+    oblique rotation for n_factors > 1, matching Big Five's known correlated
+    dimensions). Returns None if there isn't enough data to fit."""
+    from core._compat import patch_factor_analyzer
+
+    patch_factor_analyzer()
+    from factor_analyzer import FactorAnalyzer
+
+    cols = _subscale_item_columns(dataset, subscale_id)
+    data = dataset.scored[cols].dropna()
+    n, p = data.shape
+    if p < 3 or n < 10 or n_factors < 1 or n_factors >= p:
+        return None
+
+    rotation = None if n_factors == 1 else "promax"
+    try:
+        fa = FactorAnalyzer(n_factors=n_factors, rotation=rotation, method="ml")
+        fa.fit(data)
+    except Exception:
+        return None
+
+    factor_names = [f"F{i + 1}" for i in range(n_factors)]
+    loadings = pd.DataFrame(fa.loadings_, index=cols, columns=factor_names)
+    communalities = pd.Series(fa.get_communalities(), index=cols, name="communality")
+    variance = fa.get_factor_variance()
+    variance_df = pd.DataFrame(
+        variance, index=["SS loadings", "Proportion Var", "Cumulative Var"], columns=factor_names
+    ).T
+
+    phi = None
+    if n_factors > 1 and fa.phi_ is not None:
+        phi = pd.DataFrame(fa.phi_, index=factor_names, columns=factor_names)
+
+    fit = _efa_fit_indices(data.corr().values, fa.loadings_, fa.get_uniquenesses(), n, p, n_factors)
+    return EFAResult(n_factors, n, loadings, communalities, variance_df, phi, fit)
+
+
+# --- validity -------------------------------------------------
+
+CRITERION_CONVERGENT_COL = "criterion_convergent"
+CRITERION_DISCRIMINANT_COL = "criterion_discriminant"
+
+
+@dataclass
+class CriterionValidity:
+    convergent_r: float | None
+    discriminant_r: float | None
+    convergent_pair: tuple[pd.Series, pd.Series] | None
+    discriminant_pair: tuple[pd.Series, pd.Series] | None
+
+
+def criterion_validity(dataset) -> CriterionValidity:
+    """Correlates the primary total score against the simulated external
+    criterion variables (see data/generate_sample_data.py). Real datasets
+    without those columns simply get None back - this never crashes on an
+    unmapped/missing criterion."""
+    primary_total = total_score_series(dataset)
+
+    def _pair(col: str) -> tuple[float, tuple[pd.Series, pd.Series]] | tuple[None, None]:
+        if col not in dataset.raw.columns or primary_total.empty:
+            return None, None
+        criterion = pd.to_numeric(dataset.raw[col], errors="coerce")
+        paired = pd.concat([primary_total, criterion], axis=1).dropna()
+        if len(paired) < 3:
+            return None, None
+        r = paired.iloc[:, 0].corr(paired.iloc[:, 1])
+        if pd.isna(r):
+            return None, None
+        return float(r), (paired.iloc[:, 0], paired.iloc[:, 1])
+
+    conv_r, conv_pair = _pair(CRITERION_CONVERGENT_COL)
+    disc_r, disc_pair = _pair(CRITERION_DISCRIMINANT_COL)
+    return CriterionValidity(conv_r, disc_r, conv_pair, disc_pair)
+
+
+@dataclass
+class ValiditySource:
+    key: str
+    label: str
+    status: str  # "strong" | "moderate" | "limited" | "none"
+    summary: str
+
+
+VALIDITY_STATUS_LABELS = {
+    "strong": "Stark evidens",
+    "moderate": "Måttlig evidens",
+    "limited": "Begränsad evidens",
+    "none": "Ingen information",
+}
+
+
+def validity_overview(
+    dataset,
+    response_process_status: str = "none",
+    consequences_status: str = "none",
+) -> list[ValiditySource]:
+    """The five evidence sources from the Standards for Educational and
+    Psychological Testing (AERA/APA/NCME). Content, internal structure, and
+    relations-to-other-variables are derived from the data; response
+    processes and consequences are not computable from a dataset and are
+    passed in as manually-set statuses from the page's own UI state."""
+    q = dataset.questionnaire
+    sources: list[ValiditySource] = []
+
+    content_status = "strong" if q.source_citation else "limited"
+    content_summary = (
+        f"Källa: {q.source_citation}" if q.source_citation else "Ingen källhänvisning angiven för detta test."
+    )
+    sources.append(ValiditySource("content", "Testinnehåll (Content)", content_status, content_summary))
+
+    sources.append(
+        ValiditySource(
+            "response_processes",
+            "Responsprocesser (Response Processes)",
+            response_process_status,
+            "Manuellt dokumenterad status - se fliken för detaljer.",
+        )
+    )
+
+    overall = reliability_snapshot(dataset)
+    efa = efa_fit(dataset, max(1, len(q.subscales))) if q.subscales else None
+    alpha_ok = overall.alpha is not None and overall.alpha >= 0.80
+    rmsea_ok = efa is not None and efa.fit.rmsea is not None and efa.fit.rmsea < 0.08
+    if alpha_ok and (efa is None or efa.fit.rmsea is None or rmsea_ok):
+        structure_status = "strong"
+    elif overall.alpha is not None and overall.alpha >= 0.70:
+        structure_status = "moderate"
+    elif overall.alpha is not None:
+        structure_status = "limited"
+    else:
+        structure_status = "none"
+    structure_parts = []
+    if overall.alpha is not None:
+        structure_parts.append(f"Cronbach's alpha = {overall.alpha:.2f}")
+    if efa is not None and efa.fit.rmsea is not None:
+        structure_parts.append(f"RMSEA = {efa.fit.rmsea:.3f}")
+    structure_summary = ", ".join(structure_parts) if structure_parts else "Otillräcklig data."
+    sources.append(ValiditySource("internal_structure", "Intern struktur (Internal Structure)", structure_status, structure_summary))
+
+    cv = criterion_validity(dataset)
+    if cv.convergent_r is not None and cv.discriminant_r is not None:
+        if abs(cv.convergent_r) >= 0.5 and abs(cv.discriminant_r) < 0.3:
+            relations_status = "strong"
+        elif abs(cv.convergent_r) >= 0.3:
+            relations_status = "moderate"
+        else:
+            relations_status = "limited"
+        relations_summary = f"Konvergent r = {cv.convergent_r:.2f}, Diskriminant r = {cv.discriminant_r:.2f}"
+    else:
+        relations_status = "none"
+        relations_summary = "Ingen kriterievariabel tillgänglig i datasetet."
+    sources.append(
+        ValiditySource("relations", "Relation till andra variabler (Relations to Other Variables)", relations_status, relations_summary)
+    )
+
+    sources.append(
+        ValiditySource(
+            "consequences",
+            "Konsekvenser av testanvändning (Consequences)",
+            consequences_status,
+            "Manuellt dokumenterad status - se Decision Support och Fairness Explorer för relaterad analys.",
+        )
+    )
+
+    return sources
+
+
+def validity_status_counts(sources: list[ValiditySource]) -> dict[str, int]:
+    counts = {"strong": 0, "moderate": 0, "limited": 0, "none": 0}
+    for source in sources:
+        counts[source.status] += 1
+    return counts

@@ -183,3 +183,30 @@ def stacked_response_distribution_chart(item_dist: pd.DataFrame) -> go.Figure:
         **_LAYOUT_DEFAULTS,
     )
     return fig
+
+
+def scree_plot_chart(actual_eigenvalues, simulated_eigenvalues) -> go.Figure:
+    x = list(range(1, len(actual_eigenvalues) + 1))
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(x=x, y=actual_eigenvalues, mode="lines+markers", name="Egenvärden (data)", line=dict(color=COLOR_PRIMARY))
+    )
+    if len(simulated_eigenvalues):
+        fig.add_trace(
+            go.Scatter(
+                x=x,
+                y=simulated_eigenvalues,
+                mode="lines+markers",
+                name="Parallel analysis (slumpdata)",
+                line=dict(color=COLOR_WARNING, dash="dash"),
+            )
+        )
+    fig.add_hline(y=1.0, line_dash="dot", line_color="#9AA4C7")
+    fig.update_layout(
+        xaxis_title="Antal faktorer",
+        yaxis_title="Egenvärde",
+        height=340,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02),
+        **_LAYOUT_DEFAULTS,
+    )
+    return fig

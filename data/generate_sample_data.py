@@ -33,6 +33,15 @@ GENDER_PROBS = [0.62, 0.37, 0.01]
 RETEST_FRACTION = 0.3
 RETEST_STABILITY = 0.85
 
+# Simulated external criterion variables for the Validity Dashboard (relations
+# to other variables). criterion_convergent is built to correlate with the
+# test's primary trait, standing in for a same-domain proxy measure (e.g. a
+# BDI-II score alongside a GAD-7 dataset); criterion_discriminant is
+# independent noise, standing in for an unrelated trait. Neither is a real
+# instrument - both exist purely to demonstrate convergent/discriminant
+# validity analysis on synthetic data (see CLAUDE.md "Sample data").
+CRITERION_CONVERGENT_R = 0.65
+
 
 def _discretize(continuous: np.ndarray, thresholds: list[float]) -> np.ndarray:
     """Bin a continuous z-score array into 0..len(thresholds) ordinal levels."""
@@ -43,6 +52,14 @@ def _add_demographics(rng: np.random.Generator, n: int) -> pd.DataFrame:
     age = rng.normal(38, 13, size=n).clip(18, 75).round().astype(int)
     gender = rng.choice(GENDER_CATEGORIES, size=n, p=GENDER_PROBS)
     return pd.DataFrame({"age": age, "gender": gender})
+
+
+def _add_criterion_variables(rng: np.random.Generator, n: int, primary_theta: np.ndarray) -> pd.DataFrame:
+    convergent_z = CRITERION_CONVERGENT_R * primary_theta + np.sqrt(1 - CRITERION_CONVERGENT_R**2) * rng.normal(0, 1, size=n)
+    discriminant_z = rng.normal(0, 1, size=n)
+    convergent = np.clip(np.round(50 + 15 * convergent_z), 0, 100)
+    discriminant = np.clip(np.round(50 + 15 * discriminant_z), 0, 100)
+    return pd.DataFrame({"criterion_convergent": convergent, "criterion_discriminant": discriminant})
 
 
 def _add_retest_wave(
@@ -110,7 +127,8 @@ def generate_single_factor_dataset(
     demographics = _add_demographics(rng, n)
     signs = {item.id: 1.0 for item in questionnaire.items}
     retest = _add_retest_wave(rng, questionnaire, n, {"_single": theta}, loadings, signs, thresholds)
-    return pd.concat([df, demographics, retest], axis=1)
+    criteria = _add_criterion_variables(rng, n, theta)
+    return pd.concat([df, demographics, retest, criteria], axis=1)
 
 
 def generate_multi_factor_dataset(
@@ -148,7 +166,11 @@ def generate_multi_factor_dataset(
     df = pd.DataFrame(columns)
     demographics = _add_demographics(rng, n)
     retest = _add_retest_wave(rng, questionnaire, n, theta_by_factor, loadings, signs, thresholds)
-    return pd.concat([df, demographics, retest], axis=1)
+    # Anchor the criterion variables to the first subscale's trait (e.g.
+    # Extraversion for Big Five) - a documented simplification for a demo tool.
+    primary_theta = theta_by_factor[factor_ids[0]]
+    criteria = _add_criterion_variables(rng, n, primary_theta)
+    return pd.concat([df, demographics, retest, criteria], axis=1)
 
 
 def main() -> None:
