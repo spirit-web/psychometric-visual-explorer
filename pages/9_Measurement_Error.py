@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from components.concept_tooltip import concept_tooltip
+from components.export_section import render_export_section
 from components.kpi_card import kpi_card
 from core import stats_engine as se
 from core import viz_engine as ve
@@ -88,14 +89,13 @@ with tab_ci:
             "bero på mätosäkerhet.",
         )
     ci_table = se.all_person_confidence_intervals(dataset, subscale_id)
+    ci_fig = None
     if not ci_table.empty:
         preview = ci_table.head(30)
-        st.plotly_chart(
-            ve.ci_error_bar_chart(
-                preview["Person"], preview["Observerad poäng"], preview["95% KI nedre"], preview["95% KI övre"], "Poäng"
-            ),
-            width="stretch",
+        ci_fig = ve.ci_error_bar_chart(
+            preview["Person"], preview["Observerad poäng"], preview["95% KI nedre"], preview["95% KI övre"], "Poäng"
         )
+        st.plotly_chart(ci_fig, width="stretch")
         st.caption("Visar de första 30 personerna. Fullständig tabell nedan.")
         st.dataframe(ci_table, width="stretch", height=350)
     else:
@@ -137,6 +137,15 @@ with tab_change:
         )
     else:
         st.info("Ingen retest-data tillgänglig för denna delskala.")
+
+st.write("")
+render_export_section(
+    dataset,
+    "measurement_error",
+    table=ci_table,
+    table_label="Konfidensintervall per person",
+    figures={"konfidensintervall": ci_fig} if ci_fig is not None else None,
+)
 
 st.write("")
 col_back, _, col_next = st.columns([1, 3, 1])

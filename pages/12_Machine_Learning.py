@@ -10,6 +10,7 @@ import pandas as pd
 import streamlit as st
 
 from components.concept_tooltip import concept_tooltip
+from components.export_section import render_export_section
 from components.kpi_card import kpi_card
 from core import ml_engine as ml
 from core import stats_engine as se
@@ -72,7 +73,8 @@ with tab_overview:
     col_roc, col_metrics = st.columns(2)
     with col_roc:
         st.markdown(f"**Model Performance ({best_name})**")
-        st.plotly_chart(ve.roc_curve_chart(best.fpr, best.tpr, best.roc_auc), width="stretch", key="ml_overview_roc")
+        ml_roc_fig = ve.roc_curve_chart(best.fpr, best.tpr, best.roc_auc)
+        st.plotly_chart(ml_roc_fig, width="stretch", key="ml_overview_roc")
     with col_metrics:
         st.markdown("**Prestandamått**")
         tn, fp, fn, tp = best.confusion.ravel()
@@ -177,19 +179,21 @@ with tab_unsup:
 
 with tab_models:
     st.markdown("**Modelljämförelse**")
-    comparison_rows = [
-        {
-            "Modell": name,
-            "Accuracy": round(r.accuracy, 3),
-            "Precision": round(r.precision, 3),
-            "Recall": round(r.recall, 3),
-            "F1": round(r.f1, 3),
-            "ROC-AUC": round(r.roc_auc, 3),
-            "CV AUC (medel ± SD)": f"{r.cv_auc_mean:.3f} ± {r.cv_auc_std:.3f}",
-        }
-        for name, r in results.items()
-    ]
-    st.dataframe(pd.DataFrame(comparison_rows), width="stretch", hide_index=True)
+    comparison_df = pd.DataFrame(
+        [
+            {
+                "Modell": name,
+                "Accuracy": round(r.accuracy, 3),
+                "Precision": round(r.precision, 3),
+                "Recall": round(r.recall, 3),
+                "F1": round(r.f1, 3),
+                "ROC-AUC": round(r.roc_auc, 3),
+                "CV AUC (medel ± SD)": f"{r.cv_auc_mean:.3f} ± {r.cv_auc_std:.3f}",
+            }
+            for name, r in results.items()
+        ]
+    )
+    st.dataframe(comparison_df, width="stretch", hide_index=True)
     st.caption(
         "Random Forest och XGBoost är icke-linjära modeller; Neural Network (MLP) är ett litet "
         "neuralt nätverk (PyTorch) - alla utvärderas med samma metodik. Logistic Regression "
@@ -267,6 +271,15 @@ with tab_predict:
                     st.success("✅ Modellen predikterade rätt klass för denna person.")
                 else:
                     st.warning("⚠️ Modellen predikterade fel klass för denna person.")
+
+st.write("")
+render_export_section(
+    dataset,
+    "machine_learning",
+    table=comparison_df,
+    table_label="Modelljämförelse",
+    figures={"roc_kurva_basta_modell": ml_roc_fig},
+)
 
 st.write("")
 col_back, _, col_next = st.columns([1, 3, 1])

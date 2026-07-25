@@ -3,6 +3,7 @@
 import streamlit as st
 
 from components.concept_tooltip import concept_tooltip
+from components.export_section import render_export_section
 from components.kpi_card import kpi_card
 from core import stats_engine as se
 from core import viz_engine as ve
@@ -69,7 +70,8 @@ with tab_overview:
                 "trösklar. AUC (arean under kurvan) sammanfattar hur väl testet skiljer mellan "
                 "positiva och negativa fall - 0.5 är slumpnivå, 1.0 är perfekt särskiljning.",
             )
-        st.plotly_chart(ve.roc_curve_chart(roc.fpr, roc.tpr, roc.auc), width="stretch")
+        roc_fig = ve.roc_curve_chart(roc.fpr, roc.tpr, roc.auc)
+        st.plotly_chart(roc_fig, width="stretch")
 
     with col_cm:
         st.markdown("**Konfusionsmatris**")
@@ -100,15 +102,24 @@ with tab_cutoffs:
             "J = Sensitivitet + Specificitet - 1. Tröskeln som maximerar J ger den bästa balansen "
             "mellan att korrekt identifiera positiva och negativa fall.",
         )
-    table = se.cutoff_table(dataset, subscale_id)
-    if not table.empty:
-        st.dataframe(table, width="stretch", height=420)
+    cutoff_df = se.cutoff_table(dataset, subscale_id)
+    if not cutoff_df.empty:
+        st.dataframe(cutoff_df, width="stretch", height=420)
         st.caption(
             f"Rekommenderad tröskel (max Youden's J): {optimal.threshold:g} "
             f"(Sensitivitet {optimal.sensitivity:.2f}, Specificitet {optimal.specificity:.2f})."
         )
     else:
         st.info("Otillräcklig data för tröskeltabell.")
+
+st.write("")
+render_export_section(
+    dataset,
+    "decision_support",
+    table=cutoff_df,
+    table_label="Cut score-tabell",
+    figures={"roc_kurva": roc_fig},
+)
 
 st.write("")
 col_back, _, col_next = st.columns([1, 3, 1])

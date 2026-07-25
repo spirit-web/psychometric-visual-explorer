@@ -3,6 +3,7 @@
 import streamlit as st
 
 from components.concept_tooltip import concept_tooltip
+from components.export_section import render_export_section
 from components.kpi_card import kpi_card
 from core import stats_engine as se
 from core import viz_engine as ve
@@ -112,12 +113,15 @@ with tab_table:
             "En niogradig skala (1-9) med medel 5 och SD 2, ofta använd för enkel kommunikation "
             "av resultat. Bygger på samma z-poäng som T-poäng och percentil.",
         )
-    table = se.conversion_table(dataset, subscale_id)
-    if not table.empty:
-        st.dataframe(table, width="stretch", height=420)
+    conversion_df = se.conversion_table(dataset, subscale_id)
+    if not conversion_df.empty:
+        st.dataframe(conversion_df, width="stretch", height=420)
         st.caption("T-poäng = 50 + 10 × Z. Percentil och stanine beräknas från den normala fördelningen.")
     else:
         st.info("Otillräcklig data för omvandlingstabell.")
+
+st.write("")
+render_export_section(dataset, "norm_explorer", table=conversion_df, table_label="Poängomvandlingstabell")
 
 st.write("")
 col_back, _, col_next = st.columns([1, 3, 1])

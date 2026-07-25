@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from components.concept_tooltip import concept_tooltip
+from components.export_section import render_export_section
 from components.kpi_card import kpi_card
 from core import stats_engine as se
 from core import viz_engine as ve
@@ -85,9 +86,9 @@ with tab_overview:
 
 with tab_items:
     st.markdown("**Item-nivå: beskrivande statistik och reliabilitetsbidrag**")
-    rows = []
+    item_table_rows = []
     for item_stats in se.item_level_table(dataset):
-        rows.append(
+        item_table_rows.append(
             {
                 "Item": item_stats.item_id,
                 "Fråga": item_stats.text,
@@ -99,7 +100,8 @@ with tab_items:
                 "Alpha om borttaget": round(item_stats.alpha_if_deleted, 3) if item_stats.alpha_if_deleted is not None else "–",
             }
         )
-    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    item_table_df = pd.DataFrame(item_table_rows)
+    st.dataframe(item_table_df, width="stretch", hide_index=True)
 
 with tab_subscales:
     for subscale in q.subscales:
@@ -133,10 +135,21 @@ with tab_dist:
 with tab_corr:
     st.markdown("**Korrelationer mellan items (fullständig)**")
     corr = se.item_correlation_matrix(dataset)
+    corr_fig = None
     if not corr.empty:
-        st.plotly_chart(ve.correlation_heatmap(corr), width="stretch", key="corr_heatmap_full")
+        corr_fig = ve.correlation_heatmap(corr)
+        st.plotly_chart(corr_fig, width="stretch", key="corr_heatmap_full")
     else:
         st.info("För få items för en korrelationsmatris.")
+
+st.write("")
+render_export_section(
+    dataset,
+    "test_profile",
+    table=item_table_df,
+    table_label="Item-nivå tabell",
+    figures={"item_korrelationer": corr_fig} if corr_fig is not None else None,
+)
 
 st.write("")
 col_back, _, col_next = st.columns([1, 3, 1])

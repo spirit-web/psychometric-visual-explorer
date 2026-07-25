@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from components.concept_tooltip import concept_tooltip
+from components.export_section import render_export_section
 from components.kpi_card import kpi_card
 from core import stats_engine as se
 from core import viz_engine as ve
@@ -91,8 +92,10 @@ with tab_overview:
                 "Visar egenvärdena i fallande ordning. Antalet faktorer att behålla är där kurvan "
                 "planar ut (\"armbågen\"), eller där den ligger över parallel analysis-linjen.",
             )
+        scree_fig = None
         if len(pa.eigenvalues):
-            st.plotly_chart(ve.scree_plot_chart(pa.eigenvalues, pa.simulated_eigenvalues), width="stretch")
+            scree_fig = ve.scree_plot_chart(pa.eigenvalues, pa.simulated_eigenvalues)
+            st.plotly_chart(scree_fig, width="stretch")
         else:
             st.info("Otillräcklig data för scree plot.")
 
@@ -125,6 +128,7 @@ with tab_loadings:
         table = efa.loadings.copy()
         table["Kommunalitet"] = efa.communalities.round(2)
         table.insert(0, "Fråga", [next(i.text for i in q.items if i.id == iid) for iid in table.index])
+        loadings_export_df = table.round(2).reset_index().rename(columns={"index": "Item"})
         st.dataframe(table.round(2), width="stretch")
 
         st.write("")
@@ -171,6 +175,15 @@ with tab_fit:
         )
     else:
         st.info("Modellanpassning kräver fler frihetsgrader (fler items relativt antal faktorer) eller mer data.")
+
+st.write("")
+render_export_section(
+    dataset,
+    "factor_explorer",
+    table=loadings_export_df if efa is not None else None,
+    table_label="Faktorladdningar",
+    figures={"scree_plot": scree_fig} if scree_fig is not None else None,
+)
 
 st.write("")
 col_back, _, col_next = st.columns([1, 3, 1])

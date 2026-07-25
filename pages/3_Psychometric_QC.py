@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from components.concept_tooltip import concept_tooltip
+from components.export_section import render_export_section
 from components.kpi_card import kpi_card, status_icon
 from core import stats_engine as se
 from core import viz_engine as ve
@@ -46,8 +47,10 @@ col_missing, col_checks = st.columns(2)
 with col_missing:
     st.markdown("**Bortfall per item (%)**")
     if not missing_series.empty:
-        st.plotly_chart(ve.missing_by_item_chart(missing_series), width="stretch")
+        missing_fig = ve.missing_by_item_chart(missing_series)
+        st.plotly_chart(missing_fig, width="stretch")
     else:
+        missing_fig = None
         st.info("Inga items att visa.")
 
 with col_checks:
@@ -59,11 +62,10 @@ with col_checks:
             "Automatiska kontroller som flaggar potentiella datakvalitetsproblem: konstanta eller "
             "lågvarierande items, golv-/takeffekter, univariata outliers (|z| > 3.29) och dubbletter.",
         )
-    rows = [
-        {"Kontroll": c.name, "Status": status_icon(c.status), "Kommentar": c.comment}
-        for c in summary.checks
-    ]
-    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    checks_df = pd.DataFrame(
+        [{"Kontroll": c.name, "Status": status_icon(c.status), "Kommentar": c.comment} for c in summary.checks]
+    )
+    st.dataframe(checks_df, width="stretch", hide_index=True)
 
 st.write("")
 
@@ -73,6 +75,15 @@ elif summary.status == "warning":
     st.warning(f"⚠️ {summary.message}")
 else:
     st.error(f"🛑 {summary.message}")
+
+st.write("")
+render_export_section(
+    dataset,
+    "psychometric_qc",
+    table=checks_df,
+    table_label="Kvalitetskontroller",
+    figures={"bortfall_per_item": missing_fig} if missing_fig is not None else None,
+)
 
 st.write("")
 col_back, _, col_next = st.columns([1, 3, 1])

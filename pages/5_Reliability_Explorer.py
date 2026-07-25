@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from components.concept_tooltip import concept_tooltip
+from components.export_section import render_export_section
 from components.kpi_card import kpi_card
 from core import stats_engine as se
 from core import viz_engine as ve
@@ -64,8 +65,10 @@ with tab_overview:
                 "(<0.30) tyder på att itemet mäter något annat än resten av skalan.",
             )
         r_series = item_df["item_total_r"].dropna()
+        item_total_fig = None
         if not r_series.empty:
-            st.plotly_chart(ve.horizontal_bar_chart(r_series, "Item-total korrelation", x_range=(0, 1)), width="stretch")
+            item_total_fig = ve.horizontal_bar_chart(r_series, "Item-total korrelation", x_range=(0, 1))
+            st.plotly_chart(item_total_fig, width="stretch")
         else:
             st.info("För få data för item-total korrelationer.")
 
@@ -93,9 +96,9 @@ with tab_overview:
 
 with tab_item:
     st.markdown("**Item-total korrelationer och tolkning**")
-    rows = []
+    item_total_rows = []
     for i in item_stats:
-        rows.append(
+        item_total_rows.append(
             {
                 "Item": i.item_id,
                 "Fråga": i.text,
@@ -109,7 +112,8 @@ with tab_item:
                 ),
             }
         )
-    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    item_total_df = pd.DataFrame(item_total_rows)
+    st.dataframe(item_total_df, width="stretch", hide_index=True)
 
 with tab_scale:
     header_cols = st.columns([5, 1])
@@ -189,6 +193,15 @@ with tab_retest:
             "Simulerad retest-data: en delmängd av deltagarna besvarade testet igen ~2 veckor "
             "senare. Genereras av data/generate_sample_data.py för demonstrationssyfte."
         )
+
+st.write("")
+render_export_section(
+    dataset,
+    "reliability",
+    table=item_total_df,
+    table_label="Item-total korrelationer",
+    figures={"item_total_korrelation": item_total_fig} if item_total_fig is not None else None,
+)
 
 st.write("")
 col_back, _, col_next = st.columns([1, 3, 1])

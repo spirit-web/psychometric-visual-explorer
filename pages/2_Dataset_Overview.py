@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from components.concept_tooltip import concept_tooltip
+from components.export_section import render_export_section
 from components.kpi_card import kpi_card, status_icon
 from core import stats_engine as se
 from core import viz_engine as ve
@@ -40,7 +41,8 @@ with col_dist:
             "respektive svarskategori. Ojämna fördelningar kan tyda på golv-/takeffekter.",
         )
     dist_df = se.response_distribution(dataset)
-    st.plotly_chart(ve.response_distribution_chart(dist_df), width="stretch")
+    dist_fig = ve.response_distribution_chart(dist_df)
+    st.plotly_chart(dist_fig, width="stretch")
 
 with col_missing:
     header_cols = st.columns([5, 1])
@@ -52,7 +54,8 @@ with col_missing:
             "otydliga frågor eller ett känsligt ämne.",
         )
     missing_series = se.missing_by_item(dataset)
-    st.plotly_chart(ve.missing_by_item_chart(missing_series), width="stretch")
+    missing_fig = ve.missing_by_item_chart(missing_series)
+    st.plotly_chart(missing_fig, width="stretch")
 
 st.write("")
 
@@ -75,9 +78,9 @@ with col_desc:
             "Sammanfattar fördelningen av totalpoäng per delskala: medelvärde, standardavvikelse "
             "(SD), min-max samt skevhet (snedhet) och kurtosis (toppighet) i fördelningen.",
         )
-    rows = []
+    desc_rows = []
     for d in se.descriptive_stats_by_subscale(dataset):
-        rows.append(
+        desc_rows.append(
             {
                 "Delskala": d.subscale_name,
                 "N": d.n,
@@ -87,7 +90,8 @@ with col_desc:
                 "Skewness": round(d.skewness, 2) if d.skewness is not None else "–",
             }
         )
-    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    desc_df = pd.DataFrame(desc_rows)
+    st.dataframe(desc_df, width="stretch", hide_index=True)
 
 st.write("")
 
@@ -135,6 +139,15 @@ st.write("")
 
 if q.source_citation:
     st.info(f"ℹ️ {q.source_citation}")
+
+st.write("")
+render_export_section(
+    dataset,
+    "dataset_overview",
+    table=desc_df,
+    table_label="Beskrivande statistik",
+    figures={"svarsfordelning": dist_fig, "bortfall_per_item": missing_fig},
+)
 
 st.write("")
 col_back, _, col_next = st.columns([1, 3, 1])

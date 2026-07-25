@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from components.concept_tooltip import concept_tooltip
+from components.export_section import render_export_section
 from components.kpi_card import kpi_card, status_icon
 from core import stats_engine as se
 from core import viz_engine as ve
@@ -58,11 +59,13 @@ with tab_overview:
     col_table, col_donut = st.columns([2, 1])
     with col_table:
         st.markdown("**Evidensöversikt**")
-        rows = [
-            {"Evidenskälla": s.label, "Status": f"{status_icon(s.status)} {STATUS_OPTIONS[s.status]}", "Sammanfattning": s.summary}
-            for s in sources
-        ]
-        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+        validity_df = pd.DataFrame(
+            [
+                {"Evidenskälla": s.label, "Status": f"{status_icon(s.status)} {STATUS_OPTIONS[s.status]}", "Sammanfattning": s.summary}
+                for s in sources
+            ]
+        )
+        st.dataframe(validity_df, width="stretch", hide_index=True)
     with col_donut:
         st.markdown("**Evidens i korthet**")
         donut_data = pd.Series({STATUS_OPTIONS[k]: v for k, v in counts.items() if v > 0})
@@ -183,6 +186,9 @@ with tab_consequences:
         key="vd_consequences_status",
     )
     st.text_area("Anteckningar (sparas endast i denna session)", key="vd_consequences_notes")
+
+st.write("")
+render_export_section(dataset, "validity_dashboard", table=validity_df, table_label="Evidensöversikt")
 
 st.write("")
 col_back, _, col_next = st.columns([1, 3, 1])

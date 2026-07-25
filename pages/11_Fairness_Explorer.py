@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from components.concept_tooltip import concept_tooltip
+from components.export_section import render_export_section
 from components.kpi_card import kpi_card, status_icon
 from core import stats_engine as se
 from core import viz_engine as ve
@@ -76,7 +77,8 @@ with tab_overview:
         st.markdown("**Skillnad i medelvärde mellan grupper**")
         labels = [f"{r.dimension}<br>{r.comparison_group} vs {r.reference_group}" for r in results]
         d_values = [r.cohens_d for r in results]
-        st.plotly_chart(ve.group_comparison_bar_chart(labels, d_values), width="stretch")
+        fairness_fig = ve.group_comparison_bar_chart(labels, d_values)
+        st.plotly_chart(fairness_fig, width="stretch")
         st.caption("Positiva värden indikerar högre medelvärde för jämförelsegruppen.")
 
     st.write("")
@@ -90,18 +92,20 @@ with tab_overview:
 
     st.write("")
     st.markdown("**Detaljerad tabell**")
-    detail_rows = [
-        {
-            "Dimension": r.dimension,
-            "Referensgrupp": f"{r.reference_group} (n={r.n_reference})",
-            "Jämförelsegrupp": f"{r.comparison_group} (n={r.n_comparison})",
-            "Medel (ref)": round(r.mean_reference, 2),
-            "Medel (jämf.)": round(r.mean_comparison, 2),
-            "Cohen's d": round(r.cohens_d, 3),
-        }
-        for r in results
-    ]
-    st.dataframe(pd.DataFrame(detail_rows), width="stretch", hide_index=True)
+    fairness_detail_df = pd.DataFrame(
+        [
+            {
+                "Dimension": r.dimension,
+                "Referensgrupp": f"{r.reference_group} (n={r.n_reference})",
+                "Jämförelsegrupp": f"{r.comparison_group} (n={r.n_comparison})",
+                "Medel (ref)": round(r.mean_reference, 2),
+                "Medel (jämf.)": round(r.mean_comparison, 2),
+                "Cohen's d": round(r.cohens_d, 3),
+            }
+            for r in results
+        ]
+    )
+    st.dataframe(fairness_detail_df, width="stretch", hide_index=True)
 
 with tab_invariance:
     st.write(
@@ -124,6 +128,15 @@ with tab_invariance:
         key="fairness_invariance_status",
     )
     st.text_area("Anteckningar (sparas endast i denna session)", key="fairness_invariance_notes")
+
+st.write("")
+render_export_section(
+    dataset,
+    "fairness_explorer",
+    table=fairness_detail_df,
+    table_label="Gruppjämförelser",
+    figures={"gruppskillnader": fairness_fig},
+)
 
 st.write("")
 col_back, _, col_next = st.columns([1, 3, 1])
