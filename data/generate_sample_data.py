@@ -42,6 +42,26 @@ RETEST_STABILITY = 0.85
 # validity analysis on synthetic data (see CLAUDE.md "Sample data").
 CRITERION_CONVERGENT_R = 0.65
 
+# Simulated outcome variable for the Decision Support module (ROC/AUC, cut
+# scores) - stands in for a gold-standard clinical diagnosis or criterion
+# group membership. Simulated, not real, exactly like the criterion
+# variables above. OUTCOME_SLOPE/OFFSET are tuned so the outcome is
+# correlated with the primary trait but not perfectly separable (a
+# realistic AUC in the 0.75-0.90 range for a screening measure).
+OUTCOME_SLOPE = 1.3
+OUTCOME_OFFSET = 0.5
+
+# Simulated demographic columns used by the Fairness Explorer for group
+# comparisons. EDUCATION and GROUP are both generated independently of the
+# latent trait (no built-in group difference) so that "no meaningful bias
+# found" is the expected, realistic result - GROUP stands in generically for
+# a protected/demographic category such as ethnicity or socioeconomic
+# background without assigning fabricated real-world group labels.
+EDUCATION_CATEGORIES = ["Grundskola", "Gymnasium", "Högskola/Universitet"]
+EDUCATION_PROBS = [0.15, 0.45, 0.40]
+GROUP_CATEGORIES = ["Grupp A", "Grupp B", "Grupp C"]
+GROUP_PROBS = [0.5, 0.3, 0.2]
+
 
 def _discretize(continuous: np.ndarray, thresholds: list[float]) -> np.ndarray:
     """Bin a continuous z-score array into 0..len(thresholds) ordinal levels."""
@@ -51,7 +71,16 @@ def _discretize(continuous: np.ndarray, thresholds: list[float]) -> np.ndarray:
 def _add_demographics(rng: np.random.Generator, n: int) -> pd.DataFrame:
     age = rng.normal(38, 13, size=n).clip(18, 75).round().astype(int)
     gender = rng.choice(GENDER_CATEGORIES, size=n, p=GENDER_PROBS)
-    return pd.DataFrame({"age": age, "gender": gender})
+    education = rng.choice(EDUCATION_CATEGORIES, size=n, p=EDUCATION_PROBS)
+    group = rng.choice(GROUP_CATEGORIES, size=n, p=GROUP_PROBS)
+    return pd.DataFrame({"age": age, "gender": gender, "education": education, "group": group})
+
+
+def _add_outcome_variable(rng: np.random.Generator, n: int, primary_theta: np.ndarray) -> pd.DataFrame:
+    logit = OUTCOME_SLOPE * (primary_theta - OUTCOME_OFFSET)
+    p = 1 / (1 + np.exp(-logit))
+    outcome = (rng.random(n) < p).astype(int)
+    return pd.DataFrame({"outcome_positive": outcome})
 
 
 def _add_criterion_variables(rng: np.random.Generator, n: int, primary_theta: np.ndarray) -> pd.DataFrame:
@@ -128,7 +157,8 @@ def generate_single_factor_dataset(
     signs = {item.id: 1.0 for item in questionnaire.items}
     retest = _add_retest_wave(rng, questionnaire, n, {"_single": theta}, loadings, signs, thresholds)
     criteria = _add_criterion_variables(rng, n, theta)
-    return pd.concat([df, demographics, retest, criteria], axis=1)
+    outcome = _add_outcome_variable(rng, n, theta)
+    return pd.concat([df, demographics, retest, criteria, outcome], axis=1)
 
 
 def generate_multi_factor_dataset(
@@ -170,7 +200,8 @@ def generate_multi_factor_dataset(
     # Extraversion for Big Five) - a documented simplification for a demo tool.
     primary_theta = theta_by_factor[factor_ids[0]]
     criteria = _add_criterion_variables(rng, n, primary_theta)
-    return pd.concat([df, demographics, retest, criteria], axis=1)
+    outcome = _add_outcome_variable(rng, n, primary_theta)
+    return pd.concat([df, demographics, retest, criteria, outcome], axis=1)
 
 
 def main() -> None:

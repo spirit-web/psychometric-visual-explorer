@@ -1133,3 +1133,286 @@ def reliable_change_index(dataset, subscale_id: str | None = None) -> list[Relia
         label = str(id_col.loc[idx]) if id_col is not None else str(idx)
         results.append(ReliableChangeResult(label, float(t1[idx]), float(t2[idx]), diff, se_diff, rci, abs(rci) >= 1.96))
     return results
+
+
+# --- decision support -------------------------------------------------
+
+OUTCOME_COL = "outcome_positive"
+
+
+def has_outcome(dataset) -> bool:
+    return OUTCOME_COL in dataset.raw.columns
+
+
+def _paired_score_outcome(dataset, subscale_id: str | None = None) -> pd.DataFrame:
+    """Aligned (score, outcome) pairs with missing values dropped."""
+    if not has_outcome(dataset):
+        return pd.DataFrame()
+    score = total_score_series(dataset, subscale_id)
+    outcome = pd.to_numeric(dataset.raw[OUTCOME_COL], errors="coerce")
+    paired = pd.concat([score, outcome], axis=1).dropna()
+    paired.columns = ["score", "outcome"]
+    return paired
+
+
+@dataclass
+class ROCResult:
+    fpr: np.ndarray
+    tpr: np.ndarray
+    thresholds: np.ndarray
+    auc: float
+    auc_ci: tuple[float, float] | None
+    n: int
+
+
+def roc_analysis(dataset, subscale_id: str | None = None, n_bootstrap: int = 200, seed: int = 7) -> ROCResult | None:
+    from sklearn.metrics import roc_auc_score, roc_curve
+
+    paired = _paired_score_outcome(dataset, subscale_id)
+    if len(paired) < 10 or paired["outcome"].nunique() < 2:
+        return None
+
+    fpr, tpr, thresholds = roc_curve(paired["outcome"], paired["score"])
+    auc = float(roc_auc_score(paired["outcome"], paired["score"]))
+
+    rng = np.random.default_rng(seed)
+    boot_aucs = []
+    n = len(paired)
+    for _ in range(n_bootstrap):
+        idx = rng.integers(0, n, n)
+        sample = paired.iloc[idx]
+        if sample["outcome"].nunique() < 2:
+            continue
+        boot_aucs.append(roc_auc_score(sample["outcome"], sample["score"]))
+    ci = (float(np.percentile(boot_aucs, 2.5)), float(np.percentile(boot_aucs, 97.5))) if len(boot_aucs) >= 20 else None
+
+    return ROCResult(fpr, tpr, thresholds, auc, ci, n)
+
+
+@dataclass
+class CutoffMetrics:
+    threshold: float
+    sensitivity: float
+    specificity: float
+    ppv: float
+    npv: float
+    youdens_j: float
+    tp: int
+    fp: int
+    tn: int
+    fn: int
+
+
+def confusion_at_threshold(dataset, threshold: float, subscale_id: str | None = None) -> CutoffMetrics | None:
+    """Classifies score >= threshold as predicted-positive."""
+    paired = _paired_score_outcome(dataset, subscale_id)
+    if paired.empty:
+        return None
+
+    predicted_positive = paired["score"] >= threshold
+    actual_positive = paired["outcome"] == 1
+
+    tp = int((predicted_positive & actual_positive).sum())
+    fp = int((predicted_positive & ~actual_positive).sum())
+    fn = int((~predicted_positive & actual_positive).sum())
+    tn = int((~predicted_positive & ~actual_positive).sum())
+
+    sensitivity = tp / (tp + fn) if (tp + fn) else 0.0
+    specificity = tn / (tn + fp) if (tn + fp) else 0.0
+    ppv = tp / (tp + fp) if (tp + fp) else 0.0
+    npv = tn / (tn + fn) if (tn + fn) else 0.0
+    youdens_j = sensitivity + specificity - 1
+
+    return CutoffMetrics(threshold, sensitivity, specificity, ppv, npv, youdens_j, tp, fp, tn, fn)
+
+
+def cutoff_table(dataset, subscale_id: str | None = None, max_rows: int = 15) -> pd.DataFrame:
+    """Sensitivity/specificity/PPV/NPV/Youden's J across candidate cut
+    scores spanning the subscale's possible range."""
+    q = dataset.questionnaire
+    subscale = q.get_subscale(subscale_id) if subscale_id else (q.subscales[0] if q.subscales else None)
+    if subscale is None or not has_outcome(dataset):
+        return pd.DataFrame()
+
+    lo, hi = subscale.score_range
+    span = int(hi) - int(lo)
+    step = max(1, span // max_rows)
+    rows = []
+    for t in range(int(lo), int(hi) + 1, step):
+        m = confusion_at_threshold(dataset, t, subscale_id)
+        if m is None:
+            continue
+        rows.append(
+            {
+                "Tröskel": t,
+                "Sensitivitet": round(m.sensitivity, 2),
+                "Specificitet": round(m.specificity, 2),
+                "PPV": round(m.ppv, 2),
+                "NPV": round(m.npv, 2),
+                "Youden's J": round(m.youdens_j, 2),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def youdens_optimal_threshold(dataset, subscale_id: str | None = None) -> CutoffMetrics | None:
+    """The cut score maximizing Youden's J (sensitivity + specificity - 1)."""
+    q = dataset.questionnaire
+    subscale = q.get_subscale(subscale_id) if subscale_id else (q.subscales[0] if q.subscales else None)
+    if subscale is None or not has_outcome(dataset):
+        return None
+
+    lo, hi = subscale.score_range
+    best = None
+    for t in range(int(lo), int(hi) + 1):
+        m = confusion_at_threshold(dataset, t, subscale_id)
+        if m is None:
+            continue
+        if best is None or m.youdens_j > best.youdens_j:
+            best = m
+    return best
+
+
+# --- fairness -------------------------------------------------
+
+FAIRNESS_DIMENSIONS = {
+    "gender": "Kön",
+    "age_group": "Ålder",
+    "education": "Utbildning",
+    "group": "Grupp",
+}
+
+
+def available_fairness_dimensions(dataset) -> dict[str, str]:
+    """Which of the standard fairness grouping variables are present in
+    this dataset's raw import."""
+    available = {}
+    for key, label in FAIRNESS_DIMENSIONS.items():
+        source_col = "age" if key == "age_group" else key
+        if source_col in dataset.raw.columns:
+            available[key] = label
+    return available
+
+
+def age_group_series(dataset) -> pd.Series | None:
+    if "age" not in dataset.raw.columns:
+        return None
+    age = pd.to_numeric(dataset.raw["age"], errors="coerce")
+    return pd.cut(age, bins=[0, 25, 200], labels=["18-25", "26-65"]).astype(str)
+
+
+def fairness_dimension_series(dataset, dimension_key: str) -> pd.Series | None:
+    if dimension_key == "age_group":
+        return age_group_series(dataset)
+    if dimension_key in dataset.raw.columns:
+        return dataset.raw[dimension_key]
+    return None
+
+
+def cohens_d_interpretation(d: float) -> str:
+    magnitude = abs(d)
+    if magnitude < 0.2:
+        return "Ingen/försumbar skillnad"
+    if magnitude < 0.5:
+        return "Liten skillnad"
+    if magnitude < 0.8:
+        return "Måttlig skillnad"
+    return "Stor skillnad"
+
+
+def fairness_index(d: float) -> float:
+    """A simple 0-1 index for display: 1.0 = no group difference at all,
+    decreasing linearly to 0 at |d| >= 2 (a very large effect)."""
+    return float(max(0.0, 1 - min(abs(d) / 2, 1)))
+
+
+@dataclass
+class GroupComparisonResult:
+    dimension: str
+    reference_group: str
+    comparison_group: str
+    mean_reference: float
+    mean_comparison: float
+    n_reference: int
+    n_comparison: int
+    cohens_d: float
+    interpretation: str
+    fairness_index: float
+
+
+def group_comparison(dataset, group_series: pd.Series, dimension_label: str, subscale_id: str | None = None) -> list[GroupComparisonResult]:
+    """Cohen's d for every group vs. the largest (reference) group on the
+    subscale's total score."""
+    score = total_score_series(dataset, subscale_id)
+    paired = pd.concat([score, group_series.rename("group")], axis=1).dropna()
+    paired.columns = ["score", "group"]
+
+    counts = paired["group"].value_counts()
+    if len(counts) < 2:
+        return []
+
+    reference = counts.index[0]
+    ref_scores = paired.loc[paired["group"] == reference, "score"]
+    results = []
+    for candidate in counts.index[1:]:
+        comp_scores = paired.loc[paired["group"] == candidate, "score"]
+        n1, n2 = len(ref_scores), len(comp_scores)
+        pooled_var = ((n1 - 1) * ref_scores.var(ddof=1) + (n2 - 1) * comp_scores.var(ddof=1)) / (n1 + n2 - 2) if (n1 + n2) > 2 else 0
+        pooled_sd = np.sqrt(pooled_var) if pooled_var > 0 else 0
+        d = (comp_scores.mean() - ref_scores.mean()) / pooled_sd if pooled_sd else 0.0
+        results.append(
+            GroupComparisonResult(
+                dimension=dimension_label,
+                reference_group=str(reference),
+                comparison_group=str(candidate),
+                mean_reference=float(ref_scores.mean()),
+                mean_comparison=float(comp_scores.mean()),
+                n_reference=n1,
+                n_comparison=n2,
+                cohens_d=float(d),
+                interpretation=cohens_d_interpretation(d),
+                fairness_index=fairness_index(d),
+            )
+        )
+    return results
+
+
+def all_group_comparisons(dataset, subscale_id: str | None = None) -> list[GroupComparisonResult]:
+    """Runs group_comparison for every available fairness dimension."""
+    results = []
+    for key, label in available_fairness_dimensions(dataset).items():
+        series = fairness_dimension_series(dataset, key)
+        if series is None:
+            continue
+        results.extend(group_comparison(dataset, series, label, subscale_id))
+    return results
+
+
+@dataclass
+class FairnessSummary:
+    n_dimensions: int
+    n_comparisons: int
+    mean_fairness_index: float | None
+    max_abs_d: float | None
+    max_d_label: str | None
+    bias_level: str  # "low" | "moderate" | "high" | "none"
+
+
+def fairness_summary(results: list[GroupComparisonResult]) -> FairnessSummary:
+    if not results:
+        return FairnessSummary(0, 0, None, None, None, "none")
+
+    dimensions = {r.dimension for r in results}
+    mean_fi = float(np.mean([r.fairness_index for r in results]))
+    worst = max(results, key=lambda r: abs(r.cohens_d))
+    max_d = abs(worst.cohens_d)
+
+    if max_d < 0.2:
+        level = "low"
+    elif max_d < 0.5:
+        level = "moderate"
+    else:
+        level = "high"
+
+    label = f"{worst.dimension}: {worst.reference_group} vs {worst.comparison_group}"
+    return FairnessSummary(len(dimensions), len(results), mean_fi, max_d, label, level)

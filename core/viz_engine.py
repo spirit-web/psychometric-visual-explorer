@@ -237,3 +237,47 @@ def ci_error_bar_chart(labels: list, centers: list[float], lowers: list[float], 
     )
     fig.update_layout(yaxis_title=y_title, height=380, **_LAYOUT_DEFAULTS)
     return fig
+
+
+def roc_curve_chart(fpr, tpr, auc: float) -> go.Figure:
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=fpr, y=tpr, mode="lines", name=f"ROC (AUC = {auc:.2f})", line=dict(color=COLOR_PRIMARY, width=3)))
+    fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode="lines", name="Slumpnivå", line=dict(color="#9AA4C7", dash="dash")))
+    fig.update_layout(
+        xaxis_title="1 - Specificitet (FPR)",
+        yaxis_title="Sensitivitet (TPR)",
+        height=380,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02),
+        **_LAYOUT_DEFAULTS,
+    )
+    fig.update_xaxes(range=[0, 1])
+    fig.update_yaxes(range=[0, 1])
+    return fig
+
+
+def confusion_matrix_heatmap(tp: int, fp: int, tn: int, fn: int) -> go.Figure:
+    z = [[tp, fn], [fp, tn]]
+    text = [[f"TP<br>{tp}", f"FN<br>{fn}"], [f"FP<br>{fp}", f"TN<br>{tn}"]]
+    fig = go.Figure(
+        go.Heatmap(
+            z=z,
+            x=["Predikterat positiv", "Predikterat negativ"],
+            y=["Observerat positiv", "Observerat negativ"],
+            text=text,
+            texttemplate="%{text}",
+            colorscale=[[0, "#F5F6FA"], [1, COLOR_PRIMARY]],
+            showscale=False,
+        )
+    )
+    fig.update_layout(height=320, **_LAYOUT_DEFAULTS)
+    fig.update_yaxes(autorange="reversed")
+    return fig
+
+
+def group_comparison_bar_chart(labels: list[str], d_values: list[float]) -> go.Figure:
+    colors = [COLOR_BAD if abs(d) >= 0.5 else (COLOR_WARNING if abs(d) >= 0.2 else COLOR_GOOD) for d in d_values]
+    fig = go.Figure(go.Bar(x=labels, y=d_values, marker_color=colors, text=[f"{d:.2f}" for d in d_values], textposition="outside"))
+    for y, text in [(0.5, "Måttlig skillnad"), (-0.5, "Måttlig skillnad"), (0.8, "Stor skillnad"), (-0.8, "Stor skillnad")]:
+        fig.add_hline(y=y, line_dash="dot", line_color="#D1D5DB", annotation_text=text, annotation_font_size=10)
+    fig.update_layout(yaxis_title="Skillnad (Cohen's d)", height=380, **_LAYOUT_DEFAULTS)
+    return fig
