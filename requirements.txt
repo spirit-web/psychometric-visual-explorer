@@ -8,14 +8,23 @@ plotly
 matplotlib
 
 scikit-learn
+xgboost
+shap
+umap-learn
+torch
 
 pingouin
 factor_analyzer
 
 openpyxl
+XlsxWriter
+reportlab
 
 pydantic
 
 loguru
+joblib
 
 Pillow
+
+pytest
