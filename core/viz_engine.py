@@ -5,6 +5,7 @@ Returns figures only - never calculates statistics, never imports Streamlit.
 
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
@@ -280,4 +281,38 @@ def group_comparison_bar_chart(labels: list[str], d_values: list[float]) -> go.F
     for y, text in [(0.5, "Måttlig skillnad"), (-0.5, "Måttlig skillnad"), (0.8, "Stor skillnad"), (-0.8, "Stor skillnad")]:
         fig.add_hline(y=y, line_dash="dot", line_color="#D1D5DB", annotation_text=text, annotation_font_size=10)
     fig.update_layout(yaxis_title="Skillnad (Cohen's d)", height=380, **_LAYOUT_DEFAULTS)
+    return fig
+
+
+def precision_recall_chart(precision, recall) -> go.Figure:
+    fig = go.Figure(go.Scatter(x=recall, y=precision, mode="lines", line=dict(color=COLOR_PRIMARY, width=3), fill="tozeroy"))
+    fig.update_layout(xaxis_title="Recall (Sensitivitet)", yaxis_title="Precision (PPV)", height=380, **_LAYOUT_DEFAULTS)
+    fig.update_xaxes(range=[0, 1])
+    fig.update_yaxes(range=[0, 1.02])
+    return fig
+
+
+def scatter_2d_chart(x, y, color_labels, x_title: str, y_title: str) -> go.Figure:
+    """Generic 2D scatter colored by a categorical label series - used for
+    PCA projections colored by cluster or by outcome."""
+    fig = go.Figure()
+    labels = pd.Series(color_labels)
+    for i, category in enumerate(sorted(labels.unique(), key=str)):
+        mask = (labels == category).values
+        fig.add_trace(
+            go.Scatter(
+                x=np.asarray(x)[mask],
+                y=np.asarray(y)[mask],
+                mode="markers",
+                name=str(category),
+                marker=dict(color=CATEGORICAL_PALETTE[i % len(CATEGORICAL_PALETTE)], size=7, opacity=0.7),
+            )
+        )
+    fig.update_layout(
+        xaxis_title=x_title,
+        yaxis_title=y_title,
+        height=400,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02),
+        **_LAYOUT_DEFAULTS,
+    )
     return fig
