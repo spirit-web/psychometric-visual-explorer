@@ -10,7 +10,6 @@ matplotlib
 scikit-learn
 xgboost
 shap
-umap-learn
 torch
 
 pingouin

@@ -80,6 +80,29 @@ streamlit run app.py
 The app opens with three example datasets available directly from the Import
 Wizard ("Exempeldata") — no external data required to try it out.
 
+## Deployment (Streamlit Community Cloud)
+
+The repository is deploy-ready as-is — no secrets or environment variables
+are required.
+
+1. Push this repo to GitHub (already done if you're reading this on GitHub).
+2. Go to [share.streamlit.io](https://share.streamlit.io) and sign in with
+   GitHub.
+3. Click **New app**, pick this repo/branch, and set the main file path to
+   `app.py`.
+4. Deploy. You'll get a public URL like
+   `https://<app-name>.streamlit.app`.
+
+`packages.txt` (system libraries for Kaleido's headless-Chromium PDF/PNG
+export) and `.python-version` are already included, so the build should
+succeed without extra configuration. Note that **Test Builder writes new
+plugin files to disk during a session** — on Community Cloud that storage is
+ephemeral, so custom plugins won't survive an app reboot/redeploy (everything
+else works normally). If the initial build is slow or runs out of space, the
+first thing to try is pinning `torch` to a CPU-only wheel via
+`--extra-index-url https://download.pytorch.org/whl/cpu`, since PyPI's
+default Linux `torch` wheel bundles CUDA dependencies that aren't needed here.
+
 ## Repository structure
 
 ```
@@ -139,4 +162,4 @@ Released under the [MIT License](LICENSE).
 - Additional plugins: PANAS, PSS, SSP
 - Confirmatory factor analysis (CFA) alongside the current EFA
 - Real DIF / measurement-invariance testing (currently framed but not computed)
-- Streamlit Community Cloud deployment
+- Persistent storage for custom plugins created in Test Builder (currently session/ephemeral on cloud deployments)
