@@ -6,6 +6,6 @@ import streamlit as st
 
 
 def concept_tooltip(label: str, explanation: str) -> None:
-    with st.popover("ⓘ", use_container_width=False):
+    with st.popover("ⓘ", width="content"):
         st.markdown(f"**{label}**")
         st.write(explanation)

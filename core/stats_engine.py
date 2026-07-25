@@ -19,6 +19,21 @@ def item_columns(dataset) -> list[str]:
     return [c for c in dataset.questionnaire.item_ids if c in dataset.scored.columns]
 
 
+def subscale_item_columns(dataset, subscale_id: str | None = None) -> list[str]:
+    """Public accessor: None returns ALL item columns (whole-test); an id
+    returns just that subscale's items."""
+    return _subscale_item_columns(dataset, subscale_id)
+
+
+def linear_fit(x: pd.Series, y: pd.Series) -> tuple[float, float] | None:
+    """Least-squares (slope, intercept) for a simple trend line, e.g. for the
+    test-retest scatter. Returns None if there isn't enough variance to fit."""
+    if len(x) < 2 or x.std() == 0:
+        return None
+    slope, intercept = np.polyfit(x, y, 1)
+    return float(slope), float(intercept)
+
+
 def total_score_series(dataset, subscale_id: str | None = None) -> pd.Series:
     q = dataset.questionnaire
     if subscale_id is None:
@@ -49,6 +64,22 @@ def response_distribution(dataset) -> pd.DataFrame:
             "pct": counts.values,
         }
     )
+
+
+def response_distribution_by_item(dataset, subscale_id: str | None = None) -> pd.DataFrame:
+    """% of responses per item falling in each response category - an item x
+    category matrix used for the stacked per-item distribution chart."""
+    cols = _subscale_item_columns(dataset, subscale_id)
+    scale = dataset.questionnaire.response_scale
+    all_levels = list(range(scale.min, scale.max + 1))
+    rows = []
+    for col in cols:
+        counts = dataset.scored[col].value_counts(normalize=True) * 100
+        counts = counts.reindex(all_levels, fill_value=0.0)
+        rows.append(counts)
+    result = pd.DataFrame(rows, index=cols)
+    result.columns = [scale.labels.get(str(int(v)), str(int(v))) for v in all_levels]
+    return result
 
 
 def missing_by_item(dataset) -> pd.Series:
@@ -148,15 +179,22 @@ class ReliabilitySnapshot:
 
 
 def reliability_snapshot(dataset, subscale_id: str | None = None) -> ReliabilitySnapshot:
+    """subscale_id=None pools ALL items (whole-test reliability); pass a
+    specific subscale id for that subscale's reliability alone."""
     q = dataset.questionnaire
-    subscale = q.get_subscale(subscale_id) if subscale_id else (q.subscales[0] if q.subscales else None)
-    if subscale is None:
-        return ReliabilitySnapshot("", "", 0, 0, None, None)
+    if subscale_id is None:
+        cols = item_columns(dataset)
+        sid, name = "", "Alla items"
+    else:
+        subscale = q.get_subscale(subscale_id)
+        if subscale is None:
+            return ReliabilitySnapshot("", "", 0, 0, None, None)
+        cols = [c for c in subscale.item_ids if c in dataset.scored.columns]
+        sid, name = subscale.id, subscale.name
 
-    cols = [c for c in subscale.item_ids if c in dataset.scored.columns]
     data = dataset.scored[cols].dropna()
     if len(cols) < 2 or len(data) < 3:
-        return ReliabilitySnapshot(subscale.id, subscale.name, len(cols), len(data), None, None)
+        return ReliabilitySnapshot(sid, name, len(cols), len(data), None, None)
 
     alpha = float(pg.cronbach_alpha(data=data)[0])
     item_total_rs = []
@@ -166,11 +204,244 @@ def reliability_snapshot(dataset, subscale_id: str | None = None) -> Reliability
         if pd.notna(r):
             item_total_rs.append(r)
     mean_r = float(np.mean(item_total_rs)) if item_total_rs else None
-    return ReliabilitySnapshot(subscale.id, subscale.name, len(cols), len(data), alpha, mean_r)
+    return ReliabilitySnapshot(sid, name, len(cols), len(data), alpha, mean_r)
 
 
 def reliability_snapshot_all_subscales(dataset) -> list[ReliabilitySnapshot]:
     return [reliability_snapshot(dataset, s.id) for s in dataset.questionnaire.subscales]
+
+
+def _subscale_item_columns(dataset, subscale_id: str | None) -> list[str]:
+    """None returns ALL item columns (whole-test); an id returns just that
+    subscale's items."""
+    if subscale_id is None:
+        return item_columns(dataset)
+    subscale = dataset.questionnaire.get_subscale(subscale_id)
+    if subscale is None:
+        return []
+    return [c for c in subscale.item_ids if c in dataset.scored.columns]
+
+
+def alpha_confidence_interval(alpha: float, n: int, k: int, conf: float = 0.95) -> tuple[float | None, float | None]:
+    """Exact CI for Cronbach's alpha (Feldt, 1965), via the F-distribution."""
+    from scipy import stats as sps
+
+    if alpha is None or n <= 1 or k <= 1:
+        return None, None
+    df1 = n - 1
+    df2 = (n - 1) * (k - 1)
+    tail = (1 - conf) / 2
+    lower = 1 - (1 - alpha) * sps.f.ppf(1 - tail, df1, df2)
+    upper = 1 - (1 - alpha) * sps.f.ppf(tail, df1, df2)
+    return float(lower), float(upper)
+
+
+def item_correlation_matrix(dataset, subscale_id: str | None = None) -> pd.DataFrame:
+    cols = _subscale_item_columns(dataset, subscale_id)
+    if len(cols) < 2:
+        return pd.DataFrame()
+    return dataset.scored[cols].corr()
+
+
+def mean_inter_item_correlation(dataset, subscale_id: str | None = None) -> float | None:
+    corr = item_correlation_matrix(dataset, subscale_id)
+    if corr.empty or corr.shape[0] < 2:
+        return None
+    mask = ~np.eye(corr.shape[0], dtype=bool)
+    return float(corr.values[mask].mean())
+
+
+def item_total_interpretation(r: float | None) -> str:
+    if r is None:
+        return "–"
+    if r >= 0.5:
+        return "Bra"
+    if r >= 0.3:
+        return "Acceptabel"
+    return "Låg"
+
+
+def alpha_interpretation(alpha: float | None) -> str:
+    if alpha is None:
+        return "–"
+    if alpha >= 0.90:
+        return "Utmärkt"
+    if alpha >= 0.80:
+        return "Bra"
+    if alpha >= 0.70:
+        return "Acceptabelt"
+    if alpha >= 0.60:
+        return "Tveksamt"
+    return "Otillräckligt"
+
+
+@dataclass
+class ItemStats:
+    item_id: str
+    text: str
+    subscale_name: str
+    reverse_scored: bool
+    mean: float | None
+    sd: float | None
+    item_total_r: float | None
+    alpha_if_deleted: float | None
+
+
+def item_level_table(dataset, subscale_id: str | None = None) -> list[ItemStats]:
+    """Per-item descriptive + reliability contribution table, used by both
+    the Test Profile Explorer and the Reliability Explorer."""
+    q = dataset.questionnaire
+    subscale = q.get_subscale(subscale_id) if subscale_id else None
+    items = [i for i in q.items if subscale is None or i.id in subscale.item_ids]
+    cols = [i.id for i in items if i.id in dataset.scored.columns]
+    data = dataset.scored[cols].dropna()
+
+    results = []
+    for item in items:
+        if item.id not in cols:
+            results.append(ItemStats(item.id, item.text, q.subscale_for_item(item.id) or "", item.reverse_scored, None, None, None, None))
+            continue
+        series = dataset.scored[item.id].dropna()
+        mean = float(series.mean()) if len(series) else None
+        sd = float(series.std()) if len(series) else None
+
+        item_total_r = None
+        alpha_deleted = None
+        if len(cols) >= 3 and len(data) >= 3:
+            rest = data.drop(columns=[item.id]).sum(axis=1)
+            r = data[item.id].corr(rest)
+            item_total_r = float(r) if pd.notna(r) else None
+            remaining_cols = [c for c in cols if c != item.id]
+            if len(remaining_cols) >= 2:
+                alpha_deleted = float(pg.cronbach_alpha(data=data[remaining_cols])[0])
+
+        subscale_name = next((s.name for s in q.subscales if item.id in s.item_ids), "")
+        results.append(ItemStats(item.id, item.text, subscale_name, item.reverse_scored, mean, sd, item_total_r, alpha_deleted))
+    return results
+
+
+def mcdonald_omega(dataset, subscale_id: str | None = None) -> float | None:
+    """Omega-total from a single-factor loadings solution (factor_analyzer)."""
+    from core._compat import patch_factor_analyzer
+
+    patch_factor_analyzer()
+    from factor_analyzer import FactorAnalyzer
+
+    cols = _subscale_item_columns(dataset, subscale_id)
+    data = dataset.scored[cols].dropna() if cols else pd.DataFrame()
+    if len(cols) < 3 or len(data) < 10:
+        return None
+    try:
+        fa = FactorAnalyzer(n_factors=1, rotation=None, method="minres")
+        fa.fit(data)
+        loadings = fa.loadings_.flatten()
+    except Exception:
+        return None
+
+    loadings = np.clip(loadings, -0.999, 0.999)
+    sum_loadings_sq = float(np.sum(loadings) ** 2)
+    sum_uniqueness = float(np.sum(1 - loadings**2))
+    denom = sum_loadings_sq + sum_uniqueness
+    if denom <= 0:
+        return None
+    return float(np.clip(sum_loadings_sq / denom, 0, 1))
+
+
+@dataclass
+class SplitHalfResult:
+    r_raw: float | None
+    spearman_brown: float | None
+    guttman: float | None
+    n: int
+
+
+def split_half_reliability(dataset, subscale_id: str | None = None) -> SplitHalfResult:
+    """Odd-even split-half reliability, with Spearman-Brown correction and
+    Guttman's lambda (which does not assume equal half-variances)."""
+    cols = _subscale_item_columns(dataset, subscale_id)
+    data = dataset.scored[cols].dropna() if cols else pd.DataFrame()
+    if len(cols) < 4 or len(data) < 3:
+        return SplitHalfResult(None, None, None, len(data))
+
+    odd_cols = cols[0::2]
+    even_cols = cols[1::2]
+    odd_total = data[odd_cols].sum(axis=1)
+    even_total = data[even_cols].sum(axis=1)
+    total = data[cols].sum(axis=1)
+
+    r = odd_total.corr(even_total)
+    r = float(r) if pd.notna(r) else None
+    spearman_brown = (2 * r) / (1 + r) if r is not None and (1 + r) != 0 else None
+
+    var_odd, var_even, var_total = odd_total.var(ddof=1), even_total.var(ddof=1), total.var(ddof=1)
+    guttman = 2 * (1 - (var_odd + var_even) / var_total) if var_total else None
+
+    return SplitHalfResult(r, spearman_brown, float(guttman) if guttman is not None else None, len(data))
+
+
+@dataclass
+class TestRetestResult:
+    r: float | None
+    n: int
+    ci_low: float | None
+    ci_high: float | None
+
+
+def _retest_paired_totals(dataset, subscale_id: str | None = None) -> tuple[pd.Series, pd.Series] | None:
+    """t1/t2 total-score pairs for respondents who completed the simulated
+    retest wave (`<item_id>_t2` columns), or None if unavailable."""
+    q = dataset.questionnaire
+    cols = _subscale_item_columns(dataset, subscale_id)
+    t2_cols = [f"{c}_t2" for c in cols]
+    if not cols or not all(c in dataset.raw.columns for c in t2_cols):
+        return None
+
+    scale_min, scale_max = q.response_scale.range
+    t2 = dataset.raw[t2_cols].apply(pd.to_numeric, errors="coerce").copy()
+    t2.columns = cols
+    for item in q.items:
+        if item.id in cols and item.reverse_scored:
+            t2[item.id] = (scale_min + scale_max) - t2[item.id]
+
+    retest_mask = t2.notna().all(axis=1)
+    if retest_mask.sum() < 3:
+        return None
+
+    t1_total = dataset.scored.loc[retest_mask, cols].sum(axis=1)
+    t2_total = t2.loc[retest_mask].sum(axis=1)
+    return t1_total, t2_total
+
+
+def test_retest_paired_scores(dataset, subscale_id: str | None = None) -> tuple[pd.Series, pd.Series]:
+    """Public accessor for the t1/t2 total-score pairs, e.g. for a scatter plot."""
+    paired = _retest_paired_totals(dataset, subscale_id)
+    if paired is None:
+        return pd.Series(dtype=float), pd.Series(dtype=float)
+    return paired
+
+
+def test_retest_reliability(dataset, subscale_id: str | None = None) -> TestRetestResult:
+    """Correlates t1 vs t2 total score using the `<item_id>_t2` columns
+    present in the raw import (a simulated retest sub-sample for demo data)."""
+    paired = _retest_paired_totals(dataset, subscale_id)
+    if paired is None:
+        return TestRetestResult(None, 0, None, None)
+    t1_total, t2_total = paired
+
+    r = t1_total.corr(t2_total)
+    if pd.isna(r):
+        return TestRetestResult(None, len(t1_total), None, None)
+
+    n = len(t1_total)
+    # Fisher z-transform CI for a Pearson correlation
+    z = np.arctanh(r)
+    se_r = 1 / np.sqrt(n - 3) if n > 3 else None
+    if se_r is not None:
+        z_lo, z_hi = z - 1.96 * se_r, z + 1.96 * se_r
+        ci_low, ci_high = float(np.tanh(z_lo)), float(np.tanh(z_hi))
+    else:
+        ci_low, ci_high = None, None
+    return TestRetestResult(float(r), n, ci_low, ci_high)
 
 
 # --- quality control checks -------------------------------------------------

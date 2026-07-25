@@ -101,7 +101,7 @@ if step == 1:
         for col, (key, meta) in zip(example_cols, SAMPLE_DATASETS.items()):
             with col:
                 st.markdown(f"**{meta['label']}**")
-                if st.button("Använd", key=f"use_example_{key}", use_container_width=True):
+                if st.button("Använd", key=f"use_example_{key}", width="stretch"):
                     df = pd.read_csv(meta["path"])
                     st.session_state["iw_raw_df"] = df
                     st.session_state["iw_source_name"] = meta["path"].name
@@ -113,10 +113,10 @@ if step == 1:
     st.write("")
     col_cancel, _, col_next = st.columns([1, 3, 1])
     with col_cancel:
-        if st.button("Avbryt", use_container_width=True):
+        if st.button("Avbryt", width="stretch"):
             reset_wizard()
     with col_next:
-        if st.button("Nästa →", type="primary", use_container_width=True, disabled=st.session_state["iw_raw_df"] is None):
+        if st.button("Nästa →", type="primary", width="stretch", disabled=st.session_state["iw_raw_df"] is None):
             go_to(2)
 
 # --- Step 2: Identifiera -------------------------------------------------
@@ -150,10 +150,10 @@ elif step == 2:
     st.write("")
     col_back, _, col_next = st.columns([1, 3, 1])
     with col_back:
-        if st.button("Tillbaka", use_container_width=True):
+        if st.button("Tillbaka", width="stretch"):
             go_to(1)
     with col_next:
-        if st.button("Nästa →", type="primary", use_container_width=True):
+        if st.button("Nästa →", type="primary", width="stretch"):
             go_to(3)
 
 # --- Step 3: Granska -------------------------------------------------
@@ -167,7 +167,7 @@ elif step == 3:
     kpi_cols[2].metric("Sannolika items", len(types["likely_items"]))
 
     st.write("**Förhandsgranskning**")
-    st.dataframe(df.head(10), use_container_width=True)
+    st.dataframe(df.head(10), width="stretch")
 
     with st.expander("Kolumnöversikt"):
         st.write("Sannolika items:", ", ".join(types["likely_items"]) or "–")
@@ -176,10 +176,10 @@ elif step == 3:
     st.write("")
     col_back, _, col_next = st.columns([1, 3, 1])
     with col_back:
-        if st.button("Tillbaka", use_container_width=True):
+        if st.button("Tillbaka", width="stretch"):
             go_to(2)
     with col_next:
-        if st.button("Nästa →", type="primary", use_container_width=True):
+        if st.button("Nästa →", type="primary", width="stretch"):
             go_to(4)
 
 # --- Step 4: Karta -------------------------------------------------
@@ -219,12 +219,12 @@ elif step == 4:
     st.write("")
     col_back, _, col_next = st.columns([1, 3, 1])
     with col_back:
-        if st.button("Tillbaka", use_container_width=True):
+        if st.button("Tillbaka", width="stretch"):
             go_to(3)
     with col_next:
         n_mapped = len(st.session_state["iw_column_mapping"])
         ready = questionnaire is not None and n_mapped > 0
-        if st.button("Nästa →", type="primary", use_container_width=True, disabled=not ready):
+        if st.button("Nästa →", type="primary", width="stretch", disabled=not ready):
             go_to(5)
 
 # --- Step 5: Slutför -------------------------------------------------
@@ -252,13 +252,13 @@ elif step == 5:
     kpi_cols[3].metric("Total bortfall", f"{dataset.missing_pct:.1f}%")
 
     st.write("**Poängsatt data (förhandsvisning)**")
-    st.dataframe(dataset.scored.head(10), use_container_width=True)
+    st.dataframe(dataset.scored.head(10), width="stretch")
 
     st.write("")
     col_back, _, col_next = st.columns([1, 3, 1])
     with col_back:
-        if st.button("Tillbaka", use_container_width=True):
+        if st.button("Tillbaka", width="stretch"):
             go_to(4)
     with col_next:
-        if st.button("Till Dataset Overview →", type="primary", use_container_width=True):
+        if st.button("Till Dataset Overview →", type="primary", width="stretch"):
             st.switch_page("pages/2_Dataset_Overview.py")

@@ -89,3 +89,97 @@ def score_histogram(series: pd.Series, cutoffs: list | None = None) -> go.Figure
             )
     fig.update_layout(xaxis_title="Totalpoäng", yaxis_title="Antal", height=320, **_LAYOUT_DEFAULTS)
     return fig
+
+
+def horizontal_bar_chart(series: pd.Series, x_title: str, ascending: bool = True, x_range: tuple | None = None) -> go.Figure:
+    ordered = series.sort_values(ascending=ascending)
+    fig = go.Figure(
+        go.Bar(
+            x=ordered.values,
+            y=ordered.index,
+            orientation="h",
+            marker_color=COLOR_PRIMARY,
+            text=[f"{v:.2f}" for v in ordered.values],
+            textposition="outside",
+        )
+    )
+    fig.update_layout(xaxis_title=x_title, height=max(240, 26 * len(ordered)), **_LAYOUT_DEFAULTS)
+    if x_range:
+        fig.update_xaxes(range=x_range)
+    return fig
+
+
+def correlation_heatmap(corr: pd.DataFrame) -> go.Figure:
+    fig = go.Figure(
+        go.Heatmap(
+            z=corr.values,
+            x=list(corr.columns),
+            y=list(corr.index),
+            zmin=-1,
+            zmax=1,
+            colorscale="RdBu",
+            reversescale=True,
+            colorbar=dict(title=""),
+        )
+    )
+    fig.update_layout(height=max(320, 24 * len(corr)), **_LAYOUT_DEFAULTS)
+    fig.update_yaxes(autorange="reversed")
+    return fig
+
+
+def alpha_if_deleted_chart(items: pd.DataFrame, baseline_alpha: float | None) -> go.Figure:
+    """items: DataFrame indexed by item id with column 'alpha_if_deleted'."""
+    ordered = items.sort_values("alpha_if_deleted", ascending=True)
+    colors = [COLOR_BAD if v > (baseline_alpha or 0) else COLOR_PRIMARY for v in ordered["alpha_if_deleted"]]
+    fig = go.Figure(
+        go.Bar(
+            x=ordered["alpha_if_deleted"],
+            y=ordered.index,
+            orientation="h",
+            marker_color=colors,
+            text=[f"{v:.3f}" for v in ordered["alpha_if_deleted"]],
+            textposition="outside",
+        )
+    )
+    if baseline_alpha is not None:
+        fig.add_vline(x=baseline_alpha, line_dash="dot", line_color=COLOR_WARNING, annotation_text="Nuvarande alpha")
+    fig.update_layout(xaxis_title="Alpha om borttaget", height=max(240, 26 * len(ordered)), **_LAYOUT_DEFAULTS)
+    return fig
+
+
+def scatter_with_regression(
+    x: pd.Series, y: pd.Series, x_title: str, y_title: str, trendline: tuple[float, float] | None = None
+) -> go.Figure:
+    """trendline: precomputed (slope, intercept) from stats_engine.linear_fit - this
+    function only draws, it does not fit anything."""
+    fig = go.Figure(go.Scatter(x=x, y=y, mode="markers", marker=dict(color=COLOR_PRIMARY, opacity=0.6)))
+    if trendline is not None:
+        slope, intercept = trendline
+        x_line = [float(x.min()), float(x.max())]
+        y_line = [slope * xv + intercept for xv in x_line]
+        fig.add_trace(go.Scatter(x=x_line, y=y_line, mode="lines", line=dict(color=COLOR_WARNING, dash="dash")))
+    fig.update_layout(xaxis_title=x_title, yaxis_title=y_title, height=340, showlegend=False, **_LAYOUT_DEFAULTS)
+    return fig
+
+
+def stacked_response_distribution_chart(item_dist: pd.DataFrame) -> go.Figure:
+    """item_dist: item x category %-matrix from stats_engine.response_distribution_by_item."""
+    fig = go.Figure()
+    for i, category in enumerate(item_dist.columns):
+        fig.add_trace(
+            go.Bar(
+                name=str(category),
+                x=item_dist[category],
+                y=item_dist.index,
+                orientation="h",
+                marker_color=CATEGORICAL_PALETTE[i % len(CATEGORICAL_PALETTE)],
+            )
+        )
+    fig.update_layout(
+        barmode="stack",
+        xaxis_title="Andel av svar (%)",
+        height=max(280, 24 * len(item_dist)),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02),
+        **_LAYOUT_DEFAULTS,
+    )
+    return fig

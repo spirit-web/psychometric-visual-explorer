@@ -46,7 +46,7 @@ col_missing, col_checks = st.columns(2)
 with col_missing:
     st.markdown("**Bortfall per item (%)**")
     if not missing_series.empty:
-        st.plotly_chart(ve.missing_by_item_chart(missing_series), use_container_width=True)
+        st.plotly_chart(ve.missing_by_item_chart(missing_series), width="stretch")
     else:
         st.info("Inga items att visa.")
 
@@ -63,7 +63,7 @@ with col_checks:
         {"Kontroll": c.name, "Status": status_icon(c.status), "Kommentar": c.comment}
         for c in summary.checks
     ]
-    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
 st.write("")
 
@@ -77,8 +77,8 @@ else:
 st.write("")
 col_back, _, col_next = st.columns([1, 3, 1])
 with col_back:
-    if st.button("Tillbaka", use_container_width=True):
+    if st.button("Tillbaka", width="stretch"):
         st.switch_page("pages/2_Dataset_Overview.py")
 with col_next:
-    if st.button("Fortsätt till Test Profile Explorer →", type="primary", use_container_width=True):
+    if st.button("Fortsätt till Test Profile Explorer →", type="primary", width="stretch"):
         st.switch_page("pages/4_Test_Profile_Explorer.py")

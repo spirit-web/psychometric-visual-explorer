@@ -40,7 +40,7 @@ with col_dist:
             "respektive svarskategori. Ojämna fördelningar kan tyda på golv-/takeffekter.",
         )
     dist_df = se.response_distribution(dataset)
-    st.plotly_chart(ve.response_distribution_chart(dist_df), use_container_width=True)
+    st.plotly_chart(ve.response_distribution_chart(dist_df), width="stretch")
 
 with col_missing:
     header_cols = st.columns([5, 1])
@@ -52,7 +52,7 @@ with col_missing:
             "otydliga frågor eller ett känsligt ämne.",
         )
     missing_series = se.missing_by_item(dataset)
-    st.plotly_chart(ve.missing_by_item_chart(missing_series), use_container_width=True)
+    st.plotly_chart(ve.missing_by_item_chart(missing_series), width="stretch")
 
 st.write("")
 
@@ -62,7 +62,7 @@ with col_demo:
     st.markdown("**Demografi – Kön**")
     gender = se.demographic_breakdown(dataset, "gender")
     if gender is not None and not gender.empty:
-        st.plotly_chart(ve.demographics_donut(gender), use_container_width=True)
+        st.plotly_chart(ve.demographics_donut(gender), width="stretch")
     else:
         st.info("Ingen könsvariabel hittades i datasetet.")
 
@@ -87,7 +87,7 @@ with col_desc:
                 "Skewness": round(d.skewness, 2) if d.skewness is not None else "–",
             }
         )
-    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
 st.write("")
 
@@ -113,7 +113,7 @@ with col_rel:
                 "Medel item-total r": round(r.mean_item_total_r, 2) if r.mean_item_total_r is not None else "–",
             }
         )
-    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
     st.caption("Fullständig reliabilitetsanalys finns i Reliability Explorer.")
 
 with col_qc:
@@ -139,8 +139,8 @@ if q.source_citation:
 st.write("")
 col_back, _, col_next = st.columns([1, 3, 1])
 with col_back:
-    if st.button("Tillbaka", use_container_width=True):
+    if st.button("Tillbaka", width="stretch"):
         st.switch_page("pages/1_Import_Wizard.py")
 with col_next:
-    if st.button("Fortsätt till Psychometric QC →", type="primary", use_container_width=True):
+    if st.button("Fortsätt till Psychometric QC →", type="primary", width="stretch"):
         st.switch_page("pages/3_Psychometric_QC.py")

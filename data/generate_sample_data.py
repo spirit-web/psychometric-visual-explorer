@@ -27,6 +27,12 @@ OUTPUT_DIR = Path(__file__).resolve().parent / "sample_datasets"
 GENDER_CATEGORIES = ["Kvinna", "Man", "Annat"]
 GENDER_PROBS = [0.62, 0.37, 0.01]
 
+# Test-retest sub-study design: only a minority of respondents complete a
+# second wave ~2 weeks later, as in a real retest study. RETEST_STABILITY is
+# the correlation between the true trait at t1 and t2 (temporal stability).
+RETEST_FRACTION = 0.3
+RETEST_STABILITY = 0.85
+
 
 def _discretize(continuous: np.ndarray, thresholds: list[float]) -> np.ndarray:
     """Bin a continuous z-score array into 0..len(thresholds) ordinal levels."""
@@ -37,6 +43,41 @@ def _add_demographics(rng: np.random.Generator, n: int) -> pd.DataFrame:
     age = rng.normal(38, 13, size=n).clip(18, 75).round().astype(int)
     gender = rng.choice(GENDER_CATEGORIES, size=n, p=GENDER_PROBS)
     return pd.DataFrame({"age": age, "gender": gender})
+
+
+def _add_retest_wave(
+    rng: np.random.Generator,
+    questionnaire: Questionnaire,
+    n: int,
+    theta_by_item: dict[str, np.ndarray],
+    loadings: dict[str, float],
+    signs: dict[str, float],
+    thresholds: list[float],
+) -> pd.DataFrame:
+    """Simulate a second-timepoint wave for a random subsample of respondents,
+    reusing each item's t1 loading/sign so item properties stay stable while
+    the underlying trait drifts by RETEST_STABILITY (temporal stability)."""
+    in_retest = rng.random(n) < RETEST_FRACTION
+
+    # Draw the t2 trait score once per factor (not per item) so items keep
+    # sharing a common latent trait at t2, same as they do at t1.
+    theta_t2_by_factor = {
+        factor_id: RETEST_STABILITY * theta_t1 + np.sqrt(1 - RETEST_STABILITY**2) * rng.normal(0, 1, size=n)
+        for factor_id, theta_t1 in theta_by_item.items()
+    }
+
+    columns: dict[str, np.ndarray] = {}
+    for item in questionnaire.items:
+        factor_id = item.subscale if item.subscale in theta_t2_by_factor else "_single"
+        theta_t2 = theta_t2_by_factor[factor_id]
+        noise = rng.normal(0, 1, size=n)
+        loading = loadings[item.id]
+        sign = signs[item.id]
+        continuous = sign * loading * theta_t2 + np.sqrt(max(1 - loading**2, 0.05)) * noise
+        responses = _discretize(continuous, thresholds).astype(float)
+        responses[~in_retest] = np.nan
+        columns[f"{item.id}_t2"] = responses
+    return pd.DataFrame(columns)
 
 
 def generate_single_factor_dataset(
@@ -52,8 +93,10 @@ def generate_single_factor_dataset(
     theta = rng.normal(theta_mean, theta_sd, size=n)
 
     columns: dict[str, np.ndarray] = {"respondent_id": np.arange(1, n + 1)}
+    loadings: dict[str, float] = {}
     for item in questionnaire.items:
         loading = rng.uniform(*loading_range)
+        loadings[item.id] = loading
         noise = rng.normal(0, 1, size=n)
         continuous = loading * theta + np.sqrt(max(1 - loading**2, 0.05)) * noise
         responses = _discretize(continuous, thresholds).astype(float)
@@ -65,7 +108,9 @@ def generate_single_factor_dataset(
 
     df = pd.DataFrame(columns)
     demographics = _add_demographics(rng, n)
-    return pd.concat([df, demographics], axis=1)
+    signs = {item.id: 1.0 for item in questionnaire.items}
+    retest = _add_retest_wave(rng, questionnaire, n, {"_single": theta}, loadings, signs, thresholds)
+    return pd.concat([df, demographics, retest], axis=1)
 
 
 def generate_multi_factor_dataset(
@@ -84,10 +129,14 @@ def generate_multi_factor_dataset(
     theta_by_factor = {fid: factor_scores[:, i] for i, fid in enumerate(factor_ids)}
 
     columns: dict[str, np.ndarray] = {"respondent_id": np.arange(1, n + 1)}
+    loadings: dict[str, float] = {}
+    signs: dict[str, float] = {}
     for item in questionnaire.items:
         theta = theta_by_factor[item.subscale]
         loading = rng.uniform(*loading_range)
         sign = -1.0 if item.reverse_scored else 1.0
+        loadings[item.id] = loading
+        signs[item.id] = sign
         noise = rng.normal(0, 1, size=n)
         continuous = sign * loading * theta + np.sqrt(max(1 - loading**2, 0.05)) * noise
         responses = _discretize(continuous, thresholds).astype(float)
@@ -98,7 +147,8 @@ def generate_multi_factor_dataset(
 
     df = pd.DataFrame(columns)
     demographics = _add_demographics(rng, n)
-    return pd.concat([df, demographics], axis=1)
+    retest = _add_retest_wave(rng, questionnaire, n, theta_by_factor, loadings, signs, thresholds)
+    return pd.concat([df, demographics, retest], axis=1)
 
 
 def main() -> None:
