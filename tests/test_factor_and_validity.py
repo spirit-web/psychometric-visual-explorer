@@ -105,6 +105,20 @@ def test_efa_fit_two_factor_recovers_simple_structure_and_phi():
     assert max_col_for_a != max_col_for_b
 
 
+def test_factor_item_groups_assigns_each_item_to_its_own_factor():
+    dataset = _two_factor_dataset()
+    efa = se.efa_fit(dataset, 2)
+    groups = se.factor_item_groups(efa, dataset.questionnaire)
+    assert len(groups) == 2
+    by_factor = {name: [iid for iid, _text, _loading in items] for name, items in groups}
+    a_items = {f"A{i}" for i in range(1, 6)}
+    b_items = {f"B{i}" for i in range(1, 6)}
+    groups_as_sets = list(by_factor.values())
+    assert {*groups_as_sets[0]} in (a_items, b_items)
+    assert {*groups_as_sets[1]} in (a_items, b_items)
+    assert groups_as_sets[0] != groups_as_sets[1]
+
+
 def test_efa_fit_indices_are_within_plausible_ranges():
     dataset = _single_factor_dataset(n=500)
     efa = se.efa_fit(dataset, 1)

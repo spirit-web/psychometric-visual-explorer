@@ -26,7 +26,7 @@ with kpi_cols[0]:
 with kpi_cols[1]:
     kpi_card("🗂️", "#D1FAE5", q.test_name, "Aktivt dataset", caption=f"N={dataset.n}")
 with kpi_cols[2]:
-    kpi_card("📋", "#EDE9FE", str(dataset.n_items), "Items poängsatta")
+    kpi_card("📋", "#EDE9FE", str(dataset.n_items), "Frågor poängsatta")
 with kpi_cols[3]:
     last_export = st.session_state.get("export_last_at")
     kpi_card("🕓", "#FFEDD5", last_export.strftime("%H:%M") if last_export else "Ingen ännu", "Senast exporterad (denna session)")

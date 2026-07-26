@@ -31,7 +31,7 @@ kpi_cols = st.columns(4)
 with kpi_cols[0]:
     kpi_card("👥", "#DBEAFE", f"{dataset.n:,}".replace(",", " "), "Deltagare")
 with kpi_cols[1]:
-    kpi_card("📋", "#D1FAE5", str(dataset.n_items), "Items (frågor)")
+    kpi_card("📋", "#D1FAE5", str(dataset.n_items), "Frågor")
 with kpi_cols[2]:
     kpi_card("🧩", "#EDE9FE", str(dataset.n_subscales), "Delskalor")
 with kpi_cols[3]:
@@ -69,11 +69,11 @@ st.write("")
 col_dist, col_missing = st.columns(2)
 with col_dist:
     header_cols = st.columns([5, 1])
-    header_cols[0].markdown("**Svarsfördelning (alla items)**")
+    header_cols[0].markdown("**Svarsfördelning (alla frågor)**")
     with header_cols[1]:
         concept_tooltip(
             "Svarsfördelning",
-            "Visar hur stor andel av alla besvarade items (över samtliga deltagare) som föll i "
+            "Visar hur stor andel av alla besvarade frågor (över samtliga deltagare) som föll i "
             "respektive svarskategori. Ojämna fördelningar kan tyda på golv-/takeffekter.",
         )
     dist_df = se.response_distribution(dataset)
@@ -82,11 +82,11 @@ with col_dist:
 
 with col_missing:
     header_cols = st.columns([5, 1])
-    header_cols[0].markdown("**Bortfall per item (%)**")
+    header_cols[0].markdown("**Bortfall per fråga (%)**")
     with header_cols[1]:
         concept_tooltip(
             "Bortfall",
-            "Andel deltagare som inte besvarat respektive item. Höga värden (>5%) kan indikera "
+            "Andel deltagare som inte besvarat respektive fråga. Höga värden (>5%) kan indikera "
             "otydliga frågor eller ett känsligt ämne.",
         )
     missing_series = se.missing_by_item(dataset)
@@ -111,7 +111,7 @@ with col_rel:
     with header_cols[1]:
         concept_tooltip(
             "Cronbach's alpha",
-            "Mäter intern konsistens - hur väl items i en delskala mäter samma sak. Tumregel: "
+            "Mäter intern konsistens - hur väl frågorna i en delskala mäter samma sak. Tumregel: "
             "≥0.90 utmärkt, ≥0.80 bra, ≥0.70 acceptabelt, <0.70 bör granskas.",
         )
     rows = []
@@ -119,7 +119,7 @@ with col_rel:
         rows.append(
             {
                 "Delskala": r.subscale_name,
-                "Items": r.n_items,
+                "Frågor": r.n_items,
                 "N": r.n,
                 "Alpha": round(r.alpha, 2) if r.alpha is not None else "–",
                 "Medel item-total r": round(r.mean_item_total_r, 2) if r.mean_item_total_r is not None else "–",
@@ -160,7 +160,7 @@ with profile_kpi_cols[0]:
     )
 with profile_kpi_cols[1]:
     kpi_card(
-        "👤", "#DBEAFE", str(len(reverse_ids)), "Omvänt item" if len(reverse_ids) == 1 else "Omvända items",
+        "👤", "#DBEAFE", str(len(reverse_ids)), "Omvänd fråga" if len(reverse_ids) == 1 else "Omvända frågor",
         tooltip=(
             "Antal frågor som är formulerade \"åt andra hållet\" (t.ex. en positivt formulerad fråga i "
             "ett test om ångest) och därför poängsätts baklänges innan de summeras ihop med övriga "
@@ -172,12 +172,12 @@ st.write("")
 col_corr, col_dist_item = st.columns(2)
 with col_corr:
     header_cols = st.columns([5, 1])
-    header_cols[0].markdown("**Korrelationer mellan items**")
+    header_cols[0].markdown("**Korrelationer mellan frågor**")
     with header_cols[1]:
         concept_tooltip(
-            "Item-korrelationer",
-            "Pearson-korrelation mellan varje par av items. Höga positiva värden (mörkrött) "
-            "tyder på att items mäter samma underliggande konstrukt.",
+            "Frågekorrelationer",
+            "Pearson-korrelation mellan varje par av frågor. Höga positiva värden (mörkrött) "
+            "tyder på att frågorna mäter samma underliggande konstrukt.",
         )
     corr = se.item_correlation_matrix(dataset)
     corr_fig = None
@@ -185,16 +185,16 @@ with col_corr:
         corr_fig = ve.correlation_heatmap(corr)
         st.plotly_chart(corr_fig, width="stretch", key="corr_heatmap_overview")
     else:
-        st.info("För få items för en korrelationsmatris.")
+        st.info("För få frågor för en korrelationsmatris.")
 
 with col_dist_item:
     header_cols = st.columns([5, 1])
-    header_cols[0].markdown("**Svarsfördelning per item**")
+    header_cols[0].markdown("**Svarsfördelning per fråga**")
     with header_cols[1]:
         concept_tooltip(
-            "Svarsfördelning per item",
-            "Andel svar i varje kategori för respektive item. Används för att upptäcka "
-            "golv-/takeffekter eller items som beter sig annorlunda än övriga.",
+            "Svarsfördelning per fråga",
+            "Andel svar i varje kategori för respektive fråga. Används för att upptäcka "
+            "golv-/takeffekter eller frågor som beter sig annorlunda än övriga.",
         )
     item_dist = se.response_distribution_by_item(dataset)
     item_dist_fig = None
@@ -204,7 +204,7 @@ with col_dist_item:
         item_dist_fig = ve.stacked_response_distribution_chart(item_dist_labeled)
         st.plotly_chart(item_dist_fig, width="stretch")
     else:
-        st.info("Inga items att visa.")
+        st.info("Inga frågor att visa.")
 
 st.write("")
 

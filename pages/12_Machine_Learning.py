@@ -56,6 +56,14 @@ results = _cached_run_all_models(ml_data.X, ml_data.y)
 best_name = ml.best_model_name(results)
 best = results[best_name]
 
+_ITEM_LABELS = {item.id: f"{item.id} – {item.text}" for item in q.items}
+
+
+def _with_question_text(series: pd.Series) -> pd.Series:
+    """Relabels item-column entries (e.g. GAD7_2) with their question text;
+    non-item columns (age, gender_..., etc.) are left unchanged."""
+    return series.rename(index=lambda key: _ITEM_LABELS.get(key, key))
+
 # --- KPI row -------------------------------------------------
 kpi_cols = st.columns(4)
 with kpi_cols[0]:
@@ -103,7 +111,7 @@ with tab_overview:
             "indikerar starkare bidrag - se fliken Feature Importance för SHAP-baserad analys.",
         )
     if best.feature_importance is not None:
-        top10 = best.feature_importance.head(10)
+        top10 = _with_question_text(best.feature_importance.head(10))
         st.plotly_chart(ve.horizontal_bar_chart(top10, "Relativ betydelse"), width="stretch", key="ml_overview_importance")
     else:
         st.info(f"{best_name} har ingen inbyggd feature importance. Se fliken Feature Importance för SHAP-analys.")
@@ -233,7 +241,8 @@ with tab_importance:
         with st.spinner("Beräknar SHAP-värden..."):
             shap_importance = ml.shap_feature_importance(shap_result.model, ml_data.X)
         if shap_importance is not None:
-            st.plotly_chart(ve.horizontal_bar_chart(shap_importance.head(15), "Medel absolut SHAP-värde"), width="stretch", key="ml_shap_chart")
+            shap_top15 = _with_question_text(shap_importance.head(15))
+            st.plotly_chart(ve.horizontal_bar_chart(shap_top15, "Medel absolut SHAP-värde"), width="stretch", key="ml_shap_chart")
             st.caption(
                 "SHAP-värden visar varje variabels genomsnittliga bidrag (absolutbelopp) till "
                 "modellens prediktioner över samtliga observationer."

@@ -105,11 +105,11 @@ with tab_content:
     source = sources_by_key["content"]
     st.markdown(f"**Status:** {status_icon(source.status)} {STATUS_OPTIONS[source.status]}")
     st.write(
-        "Innehållsvaliditet bedömer i vilken grad testets items återspeglar det avsedda "
+        "Innehållsvaliditet bedömer i vilken grad testets frågor återspeglar det avsedda "
         "konstruktets innehåll och domän."
     )
     info_cols = st.columns(3)
-    info_cols[0].metric("Antal items", dataset.n_items)
+    info_cols[0].metric("Antal frågor", dataset.n_items)
     info_cols[1].metric("Antal delskalor", dataset.n_subscales)
     info_cols[2].metric("Källa angiven", "Ja" if q.source_citation else "Nej")
     if q.source_citation:
@@ -124,7 +124,7 @@ with tab_response:
     source = sources_by_key["response_processes"]
     st.markdown(f"**Status:** {status_icon(source.status)} {STATUS_OPTIONS[source.status]}")
     st.write(
-        "Responsprocesser handlar om huruvida testpersoner tolkar och besvarar items på det sätt "
+        "Responsprocesser handlar om huruvida testpersoner tolkar och besvarar frågorna på det sätt "
         "konstruktet avsåg. Detta går sällan att beräkna från enbart svarsdata - dokumentera det "
         "manuellt här, t.ex. via kognitiva intervjuer eller tänka-högt-studier."
     )
@@ -146,7 +146,7 @@ with tab_structure:
     source = sources_by_key["internal_structure"]
     st.markdown(f"**Status:** {status_icon(source.status)} {STATUS_OPTIONS[source.status]}")
     st.write(
-        "Intern struktur bedömer om items och delskalor samspelar på ett sätt som stödjer den "
+        "Intern struktur bedömer om frågor och delskalor samspelar på ett sätt som stödjer den "
         "avsedda faktorstrukturen - reliabilitet och faktoranalys är kärnan i denna evidenskälla."
     )
     overall = se.reliability_snapshot(dataset)

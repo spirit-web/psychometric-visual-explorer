@@ -468,16 +468,16 @@ def qc_constant_items(dataset) -> QCCheck:
     cols = item_columns(dataset)
     constant = [c for c in cols if dataset.scored[c].nunique(dropna=True) <= 1]
     if constant:
-        return QCCheck("Konstanta items", "bad", f"{len(constant)} item(s): {_format_item_list(constant)}", constant)
-    return QCCheck("Konstanta items", "good", "Inga konstanta items")
+        return QCCheck("Konstanta frågor", "bad", f"{len(constant)} fråga/frågor: {_format_item_list(constant)}", constant)
+    return QCCheck("Konstanta frågor", "good", "Inga konstanta frågor")
 
 
 def qc_low_variance_items(dataset, threshold: float = 0.1) -> QCCheck:
     cols = item_columns(dataset)
     low = [c for c in cols if dataset.scored[c].var(skipna=True) < threshold]
     if low:
-        return QCCheck("Låg varians items", "warning", f"{len(low)} item(s): {_format_item_list(low)}", low)
-    return QCCheck("Låg varians items", "good", "Inga items med låg varians")
+        return QCCheck("Låg varians frågor", "warning", f"{len(low)} fråga/frågor: {_format_item_list(low)}", low)
+    return QCCheck("Låg varians frågor", "good", "Inga frågor med låg varians")
 
 
 def qc_floor_effect(dataset, threshold_pct: float = 15.0) -> QCCheck:
@@ -492,7 +492,7 @@ def qc_floor_effect(dataset, threshold_pct: float = 15.0) -> QCCheck:
             flagged.append(c)
     name = f"Golveffekt (≥{threshold_pct:.0f}% vid min)"
     if flagged:
-        return QCCheck(name, "warning", f"{len(flagged)} item(s): {_format_item_list(flagged)}", flagged)
+        return QCCheck(name, "warning", f"{len(flagged)} fråga/frågor: {_format_item_list(flagged)}", flagged)
     return QCCheck(name, "good", "Inga golveffekter")
 
 
@@ -508,7 +508,7 @@ def qc_ceiling_effect(dataset, threshold_pct: float = 15.0) -> QCCheck:
             flagged.append(c)
     name = f"Takeffekt (≥{threshold_pct:.0f}% vid max)"
     if flagged:
-        return QCCheck(name, "warning", f"{len(flagged)} item(s): {_format_item_list(flagged)}", flagged)
+        return QCCheck(name, "warning", f"{len(flagged)} fråga/frågor: {_format_item_list(flagged)}", flagged)
     return QCCheck(name, "good", "Inga takeffekter")
 
 
@@ -592,9 +592,18 @@ def quality_summary(dataset) -> QualitySummary:
     miss = missing_by_item(dataset)
 
     if n_bad > 0:
-        status, message = "bad", "Allvarliga problem hittades. Granska datasetet innan vidare analys."
+        status, message = (
+            "bad",
+            f"{n_bad} punkt(er) bör granskas - t.ex. dubbletter eller konstanta frågor tyder ofta på "
+            "ett fel i datainsamlingen eller exporten, snarare än ett normalt drag i urvalet.",
+        )
     elif n_flagged > 0:
-        status, message = "warning", f"{n_flagged} punkt(er) att granska. Inga allvarliga problem."
+        status, message = (
+            "warning",
+            f"{n_flagged} punkt(er) värda att känna till (t.ex. golv-/takeffekter eller enstaka "
+            "outliers). Detta är oftast egenskaper hos urvalet, inte fel i datan - inget du behöver "
+            "åtgärda, men bra att ha i åtanke när du tolkar reliabilitet och faktorstruktur.",
+        )
     else:
         status, message = "good", "Inga allvarliga problem funna."
 
@@ -776,6 +785,26 @@ def efa_fit(dataset, n_factors: int, subscale_id: str | None = None) -> EFAResul
 
     fit = _efa_fit_indices(data.corr().values, fa.loadings_, fa.get_uniquenesses(), n, p, n_factors)
     return EFAResult(n_factors, n, loadings, communalities, variance_df, phi, fit)
+
+
+def factor_item_groups(efa: EFAResult, questionnaire) -> list[tuple[str, list[tuple[str, str, float]]]]:
+    """Groups items by their primary (highest-magnitude) factor loading -
+    a plain-language view of "which questions make up which factor", since
+    the raw loadings table alone is hard to read without a stats background.
+    Returns one (factor_name, items) tuple per factor, items sorted by
+    |loading| descending; each item is (item_id, text, signed loading)."""
+    text_by_id = {item.id: item.text for item in questionnaire.items}
+    primary_factor = efa.loadings.abs().idxmax(axis=1)
+    groups = []
+    for factor_name in efa.loadings.columns:
+        item_ids = [iid for iid in efa.loadings.index if primary_factor[iid] == factor_name]
+        items = sorted(
+            ((iid, text_by_id.get(iid, iid), float(efa.loadings.loc[iid, factor_name])) for iid in item_ids),
+            key=lambda t: abs(t[2]),
+            reverse=True,
+        )
+        groups.append((factor_name, items))
+    return groups
 
 
 # --- validity -------------------------------------------------

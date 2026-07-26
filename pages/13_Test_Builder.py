@@ -84,7 +84,7 @@ kpi_cols = st.columns(4)
 with kpi_cols[0]:
     kpi_card("📚", "#DBEAFE", st.session_state["tb_test_name"], "Testnamn (utkast)")
 with kpi_cols[1]:
-    kpi_card("📋", "#D1FAE5", str(len(st.session_state["tb_items_df"])), "Items i utkast")
+    kpi_card("📋", "#D1FAE5", str(len(st.session_state["tb_items_df"])), "Frågor i utkast")
 with kpi_cols[2]:
     kpi_card("🧩", "#EDE9FE", str(len(st.session_state["tb_subscales_df"])), "Delskalor i utkast")
 with kpi_cols[3]:
@@ -93,13 +93,13 @@ with kpi_cols[3]:
 st.write("")
 
 tab_shorten, tab_info, tab_items, tab_subscales, tab_cutoffs, tab_save = st.tabs(
-    ["Korta ner testet", "Grundinfo & svarsskala", "Items", "Delskalor", "Cut-offs", "Spara"]
+    ["Korta ner testet", "Grundinfo & svarsskala", "Frågor", "Delskalor", "Cut-offs", "Spara"]
 )
 
 with tab_shorten:
     st.markdown("**Vilka frågor är säkrast att ta bort?**")
     st.caption(
-        f"Baserat på verklig data för det aktiva testet ({q.test_name}) - visar vilka items som "
+        f"Baserat på verklig data för det aktiva testet ({q.test_name}) - visar vilka frågor som "
         "bidrar minst till reliabiliteten och därför är säkrast att ta bort om du vill korta ner testet."
     )
     item_stats = se.item_level_table(dataset)
@@ -119,19 +119,19 @@ with tab_shorten:
     weak_items = [i.item_id for i in item_stats if i.item_total_r is not None and i.item_total_r < 0.30]
     if weak_items:
         st.warning(
-            f"⚠️ {len(weak_items)} item(er) har låg item-total-korrelation (<0.30) och bidrar minst "
+            f"⚠️ {len(weak_items)} fråga/frågor har låg item-total-korrelation (<0.30) och bidrar minst "
             f"till skalan: {', '.join(weak_items)}. Kandidater att ta bort om testet ska kortas ner."
         )
     else:
-        st.success("✅ Alla items har rimlig item-total-korrelation (≥0.30) - inget uppenbart att ta bort.")
+        st.success("✅ Alla frågor har rimlig item-total-korrelation (≥0.30) - inget uppenbart att ta bort.")
 
     to_remove = st.multiselect(
-        "Välj items att ta bort från utkastet",
+        "Välj frågor att ta bort från utkastet",
         [i.item_id for i in item_stats],
         default=weak_items,
         key="tb_shorten_selection",
     )
-    if st.button("➖ Ta bort valda items från utkastet", disabled=not to_remove):
+    if st.button("➖ Ta bort valda frågor från utkastet", disabled=not to_remove):
         items_df = st.session_state["tb_items_df"]
         st.session_state["tb_items_df"] = items_df[~items_df["id"].isin(to_remove)].reset_index(drop=True)
 
@@ -143,7 +143,7 @@ with tab_shorten:
         subscales_df["item_ids"] = subscales_df["item_ids"].apply(_strip_removed_ids)
         st.session_state["tb_subscales_df"] = subscales_df
 
-        st.success(f"Tog bort {len(to_remove)} item(er) från utkastet. Gå till fliken Spara för att spara som en ny, kortare testdefinition.")
+        st.success(f"Tog bort {len(to_remove)} fråga/frågor från utkastet. Gå till fliken Spara för att spara som en ny, kortare testdefinition.")
         st.rerun()
 
 with tab_info:
@@ -169,15 +169,37 @@ with tab_info:
         )
 
 with tab_items:
-    st.markdown("**Items**")
-    st.caption("`subscale` måste matcha ett delskale-ID i fliken Delskalor.")
+    st.markdown("**Lägg till en ny fråga**")
+    with st.form("tb_add_item_form", clear_on_submit=True):
+        new_cols = st.columns([1, 2, 1, 1])
+        new_id = new_cols[0].text_input("Fråge-ID")
+        new_text = new_cols[1].text_input("Frågetext")
+        new_subscale = new_cols[2].text_input("Delskala-ID")
+        new_reverse = new_cols[3].checkbox("Omvänd")
+        added = st.form_submit_button("➕ Lägg till fråga")
+    if added:
+        if not new_id.strip() or not new_text.strip():
+            st.error("🛑 Fråge-ID och frågetext krävs.")
+        elif new_id.strip() in st.session_state["tb_items_df"]["id"].astype(str).values:
+            st.error(f"🛑 Fråge-ID {new_id.strip()} finns redan.")
+        else:
+            new_row = pd.DataFrame(
+                [{"id": new_id.strip(), "text": new_text.strip(), "subscale": new_subscale.strip(), "reverse_scored": new_reverse}]
+            )
+            st.session_state["tb_items_df"] = pd.concat([st.session_state["tb_items_df"], new_row], ignore_index=True)
+            st.success(f"✅ La till frågan {new_id.strip()}. Den visas nu längst ner i tabellen nedan.")
+            st.rerun()
+
+    st.write("")
+    st.markdown("**Frågor**")
+    st.caption("Du kan även redigera eller ta bort frågor direkt i tabellen. `subscale` måste matcha ett delskale-ID i fliken Delskalor.")
     st.session_state["tb_items_df"] = st.data_editor(
         st.session_state["tb_items_df"],
         num_rows="dynamic",
         width="stretch",
         key="tb_items_editor",
         column_config={
-            "id": "Item-ID",
+            "id": "Fråge-ID",
             "text": "Frågetext",
             "subscale": "Delskala-ID",
             "reverse_scored": st.column_config.CheckboxColumn("Omvänd"),
@@ -186,7 +208,7 @@ with tab_items:
 
 with tab_subscales:
     st.markdown("**Delskalor**")
-    st.caption("`item_ids` är en kommaseparerad lista med item-ID:n som ingår i delskalan.")
+    st.caption("`item_ids` är en kommaseparerad lista med fråge-ID:n som ingår i delskalan.")
     st.session_state["tb_subscales_df"] = st.data_editor(
         st.session_state["tb_subscales_df"],
         num_rows="dynamic",
@@ -195,7 +217,7 @@ with tab_subscales:
         column_config={
             "id": "Delskala-ID",
             "name": "Namn",
-            "item_ids": "Item-ID:n (kommaseparerat)",
+            "item_ids": "Fråge-ID:n (kommaseparerat)",
             "score_min": "Min poäng",
             "score_max": "Max poäng",
             "scoring_method": "Poängmetod (sum/mean)",

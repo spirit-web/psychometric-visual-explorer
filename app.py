@@ -44,27 +44,6 @@ def home() -> None:
     st.write("")
 
     if lang == "sv":
-        value_props = [
-            "Vill du veta var en specifik klient hamnar jämfört med normgruppen?",
-            "Vill du se om testet fungerar lika rättvist oavsett kön, ålder eller utbildning?",
-            "Vill du se vilka frågor som är viktigast — eller bygga ett eget test?",
-        ]
-    else:
-        value_props = [
-            "Want to know where a specific client falls compared to the norm group?",
-            "Want to see if the test performs equally well regardless of gender, age, or education?",
-            "Want to see which questions matter most — or build your own test?",
-        ]
-    st.markdown(
-        "<ul style='color:#374151; font-size:1.02rem; line-height:1.9; "
-        "max-width:40rem; padding-left:1.2rem;'>"
-        + "".join(f"<li>{prop}</li>" for prop in value_props)
-        + "</ul>",
-        unsafe_allow_html=True,
-    )
-    st.write("")
-
-    if lang == "sv":
         cards = [
             {
                 "icon": "\U0001F4C1",

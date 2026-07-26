@@ -29,6 +29,13 @@ n_factors = st.number_input(
     help="Förvalt värde är antalet delskalor i testdefinitionen. Parallel analysis nedan ger ett "
     "empiriskt förslag baserat på dina data.",
 )
+st.caption(
+    "Varför skiljer sig antalet faktorer mellan test? Dels beror det på hur testet är konstruerat "
+    "- t.ex. är IPIP Big Five designat för att mäta 5 oberoende dimensioner, medan GAD-7 är "
+    "designat som en enda dimension (ångest). Dels beror det på vad dina data faktiskt visar, via "
+    "Parallel analysis nedan. Om det föreslagna antalet skiljer sig från testets originaldesign kan "
+    "det bero på urvalsstorlek eller sammansättning - testa gärna olika värden ovan."
+)
 efa = se.efa_fit(dataset, int(n_factors))
 
 st.write("")
@@ -58,7 +65,7 @@ with kpi_cols[3]:
     )
     kpi_card(
         "🔬", "#FFEDD5", bartlett_text, "Bartlett's test (p)", caption="Signifikant om < .05",
-        tooltip="Testar om items korrelerar tillräckligt med varandra för att faktoranalys ska vara meningsfull. Ett lågt p-värde (< .05) är det önskade utfallet här.",
+        tooltip="Testar om frågorna korrelerar tillräckligt med varandra för att faktoranalys ska vara meningsfull. Ett lågt p-värde (< .05) är det önskade utfallet här.",
     )
 
 st.write("")
@@ -78,9 +85,25 @@ with tab_overview:
                 "kriterium än Kaisers regel (egenvärde > 1).",
             )
         if efa is not None:
-            st.metric("Antal extraherade faktorer", efa.n_factors)
-            st.metric("Extraktionsmetod", "Maximum Likelihood")
-            st.metric("Rotation", "Ingen (1 faktor)" if efa.n_factors == 1 else "Promax (oblik)")
+            rotation_text = "Ingen (1 faktor)" if efa.n_factors == 1 else "Promax (oblik)"
+            st.markdown(
+                f"""
+                <div class="pve-card" style="padding:1rem 1.3rem;">
+                  <div style="display:flex; justify-content:space-between; padding:0.4rem 0;
+                      border-bottom:1px solid #F0F1F5;">
+                    <span style="color:#6B7280;">Antal extraherade faktorer</span><b>{efa.n_factors}</b>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; padding:0.4rem 0;
+                      border-bottom:1px solid #F0F1F5;">
+                    <span style="color:#6B7280;">Extraktionsmetod</span><b>Maximum Likelihood</b>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; padding:0.4rem 0;">
+                    <span style="color:#6B7280;">Rotation</span><b>{rotation_text}</b>
+                  </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
         else:
             st.info("Otillräcklig data för faktoranalys.")
 
@@ -92,6 +115,29 @@ with tab_overview:
             st.dataframe(preview.round(2), width="stretch", height=320)
         else:
             st.info("Ingen EFA-lösning tillgänglig.")
+
+    st.write("")
+    header_cols = st.columns([5, 1])
+    header_cols[0].markdown("**Vilka frågor tillhör varje faktor?**")
+    with header_cols[1]:
+        concept_tooltip(
+            "Faktortillhörighet",
+            "Varje fråga listas under den faktor den laddar starkast på (primär faktor). "
+            "Laddningen inom parentes visar hur starkt - högre absolutbelopp betyder att frågan är "
+            "mer representativ för just den faktorn. En svag laddning (<0.30) betyder att frågan "
+            "inte passar särskilt väl in i någon faktor.",
+        )
+    if efa is not None:
+        factor_groups = se.factor_item_groups(efa, q)
+        group_cols = st.columns(min(len(factor_groups), 3))
+        for i, (factor_name, items) in enumerate(factor_groups):
+            with group_cols[i % len(group_cols)]:
+                st.markdown(f"**Faktor {i + 1} ({factor_name})**")
+                for item_id, text, loading in items:
+                    weak = " ⚠️" if abs(loading) < 0.30 else ""
+                    st.caption(f"{text} ({loading:+.2f}){weak}")
+    else:
+        st.info("Ingen EFA-lösning tillgänglig.")
 
     st.write("")
     col_scree, col_fit = st.columns(2)
@@ -141,8 +187,8 @@ with tab_loadings:
     with header_cols[1]:
         concept_tooltip(
             "Kommunalitet",
-            "Andelen varians i ett item som förklaras av de extraherade faktorerna tillsammans. "
-            "Låg kommunalitet (<0.30) betyder att itemet till stor del mäter något faktorerna inte fångar.",
+            "Andelen varians i en fråga som förklaras av de extraherade faktorerna tillsammans. "
+            "Låg kommunalitet (<0.30) betyder att frågan till stor del mäter något faktorerna inte fångar.",
         )
     if efa is not None:
         table = efa.loadings.copy()
@@ -194,7 +240,7 @@ with tab_fit:
             "princip som CFA-modellanpassning (Hu & Bentler, 1999)."
         )
     else:
-        st.info("Modellanpassning kräver fler frihetsgrader (fler items relativt antal faktorer) eller mer data.")
+        st.info("Modellanpassning kräver fler frihetsgrader (fler frågor relativt antal faktorer) eller mer data.")
 
 st.write("")
 render_export_section(

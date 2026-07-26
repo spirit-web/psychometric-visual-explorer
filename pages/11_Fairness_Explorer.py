@@ -133,7 +133,7 @@ with tab_client:
 
 with tab_invariance:
     st.write(
-        "**Differentiell itemfunktion (DIF)** undersöker om enskilda items fungerar olika för "
+        "**Differentiell itemfunktion (DIF)** undersöker om enskilda frågor fungerar olika för "
         "olika grupper trots samma underliggande nivå på konstruktet. **Measurement invariance** "
         "testar (t.ex. via flergrupps-CFA) om hela mätmodellen - itemladdningar, intercept och "
         "residualvarianser - är jämförbar mellan grupper. Utan invarians kan man inte med "
@@ -141,7 +141,7 @@ with tab_invariance:
     )
     st.warning(
         "⚠️ Fullständig DIF- och measurement invariance-analys är inte implementerad i denna "
-        "version (kräver t.ex. ordinal logistisk regression per item eller flergrupps-CFA). "
+        "version (kräver t.ex. ordinal logistisk regression per fråga eller flergrupps-CFA). "
         "Gruppjämförelserna i Översikt-fliken bygger på observerade medelvärden (Cohen's d), "
         "inte latenta poäng, och bör tolkas med försiktighet tills invarians är bekräftad."
     )

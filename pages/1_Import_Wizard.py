@@ -164,14 +164,14 @@ elif step == 2:
     kpi_cols = st.columns(3)
     kpi_cols[0].metric("Deltagare", len(df))
     kpi_cols[1].metric("Kolumner totalt", len(df.columns))
-    kpi_cols[2].metric("Identifierade items", f"{n_matched} / {n_total_items}" if questionnaire is not None else "–")
+    kpi_cols[2].metric("Identifierade frågor", f"{n_matched} / {n_total_items}" if questionnaire is not None else "–")
 
     st.write("**Förhandsgranskning**")
     st.dataframe(df.head(10), width="stretch")
 
     if questionnaire is not None:
         with st.expander(
-            "Justera kartläggning av items" if fully_matched else "Kartlägg items till kolumner",
+            "Justera kartläggning av frågor" if fully_matched else "Kartlägg frågor till kolumner",
             expanded=not fully_matched,
         ):
             options_col = ["— Ingen —"] + columns

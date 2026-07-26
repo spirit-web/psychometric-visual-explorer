@@ -29,31 +29,31 @@ with kpi_cols[0]:
         "Cronbach's alpha",
         caption=se.alpha_interpretation(overall.alpha),
         tooltip=(
-            "Mäter intern konsistens - hur väl items i skalan samvarierar. Tumregel: ≥0.90 "
+            "Mäter intern konsistens - hur väl frågorna i skalan samvarierar. Tumregel: ≥0.90 "
             "utmärkt, ≥0.80 bra, ≥0.70 acceptabelt, <0.70 bör granskas."
         ),
     )
 with kpi_cols[1]:
     kpi_card(
-        "📋", "#D1FAE5", str(overall.n_items), "Items (frågor)", caption=f"{len(q.reverse_scored_ids)} omvänt",
-        tooltip="Antal frågor (items) som ingår i skalan. 'Omvänt' anger hur många av dem som poängsätts baklänges (t.ex. en positivt formulerad fråga i ett ångesttest).",
+        "📋", "#D1FAE5", str(overall.n_items), "Frågor", caption=f"{len(q.reverse_scored_ids)} omvänt",
+        tooltip="Antal frågor som ingår i skalan. 'Omvänt' anger hur många av dem som poängsätts baklänges (t.ex. en positivt formulerad fråga i ett ångesttest).",
     )
 with kpi_cols[2]:
     kpi_card(
         "⚖️", "#EDE9FE", f"{mean_r:.2f}" if mean_r is not None else "–", "Medel inter-item r",
-        tooltip="Genomsnittlig korrelation mellan alla par av items. Bör ligga runt 0.15-0.50 - för lågt tyder på att items mäter olika saker, för högt tyder på onödigt upprepade frågor.",
+        tooltip="Genomsnittlig korrelation mellan alla par av frågor. Bör ligga runt 0.15-0.50 - för lågt tyder på att frågorna mäter olika saker, för högt tyder på onödigt upprepade frågor.",
     )
 with kpi_cols[3]:
     ci_text = f"{ci_low:.2f} – {ci_high:.2f}" if ci_low is not None else "–"
     kpi_card(
         "📊", "#FFEDD5", ci_text, "95% KI (alpha)", caption="Konfidensintervall",
-        tooltip="Intervallet där det sanna alpha-värdet troligen ligger, baserat på antal items och urvalsstorlek. Ett smalt intervall betyder en mer precis skattning.",
+        tooltip="Intervallet där det sanna alpha-värdet troligen ligger, baserat på antal frågor och urvalsstorlek. Ett smalt intervall betyder en mer precis skattning.",
     )
 
 st.write("")
 
 tab_overview, tab_item, tab_scale, tab_split, tab_retest = st.tabs(
-    ["Översikt", "Item-reliabilitet", "Skala-reliabilitet", "Split-half", "Tidsstabilitet"]
+    ["Översikt", "Frågereliabilitet", "Skala-reliabilitet", "Split-half", "Tidsstabilitet"]
 )
 
 item_stats = se.item_level_table(dataset)
@@ -94,7 +94,7 @@ with tab_overview:
                 "Vad Cronbach's alpha skulle bli om detta item togs bort ur skalan. Ett värde "
                 "högre än nuvarande alpha betyder att itemet försämrar reliabiliteten.",
             )
-        rows = [{"Aktuellt": "Alla items", "Alpha": round(overall.alpha, 3) if overall.alpha else "–"}]
+        rows = [{"Aktuellt": "Alla frågor", "Alpha": round(overall.alpha, 3) if overall.alpha else "–"}]
         for item_id, row in item_df.iterrows():
             rows.append({"Aktuellt": item_id, "Alpha": round(row["alpha_if_deleted"], 3) if pd.notna(row["alpha_if_deleted"]) else "–"})
         st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
@@ -103,9 +103,9 @@ with tab_overview:
     worsening = [i for i in item_stats if i.alpha_if_deleted is not None and overall.alpha is not None and i.alpha_if_deleted > overall.alpha]
     if worsening:
         names = ", ".join(i.item_id for i in worsening)
-        st.warning(f"⚠️ {len(worsening)} item(er) skulle höja alpha om de togs bort: {names}.")
+        st.warning(f"⚠️ {len(worsening)} fråga/frågor skulle höja alpha om de togs bort: {names}.")
     else:
-        st.success("✅ Reliabiliteten är god. Inget item försämrar skalan om det tas bort.")
+        st.success("✅ Reliabiliteten är god. Ingen fråga försämrar skalan om den tas bort.")
 
 with tab_item:
     st.markdown("**Item-total korrelationer och tolkning**")
@@ -134,8 +134,8 @@ with tab_scale:
     with header_cols[1]:
         concept_tooltip(
             "Cronbach's alpha vs McDonald's omega",
-            "Alpha antar att alla items väger lika mycket; omega bygger på en faktormodell och "
-            "är ofta ett mer robust mått, särskilt när items varierar i hur starkt de laddar på konstruktet.",
+            "Alpha antar att alla frågor väger lika mycket; omega bygger på en faktormodell och "
+            "är ofta ett mer robust mått, särskilt när frågorna varierar i hur starkt de laddar på konstruktet.",
         )
     rows = []
     for snapshot in se.reliability_snapshot_all_subscales(dataset):
@@ -143,7 +143,7 @@ with tab_scale:
         rows.append(
             {
                 "Delskala": snapshot.subscale_name,
-                "Items": snapshot.n_items,
+                "Frågor": snapshot.n_items,
                 "N": snapshot.n,
                 "Alpha": round(snapshot.alpha, 3) if snapshot.alpha is not None else "–",
                 "Omega": round(omega, 3) if omega is not None else "–",
@@ -153,7 +153,7 @@ with tab_scale:
     rows.append(
         {
             "Delskala": "Total testskala",
-            "Items": overall.n_items,
+            "Frågor": overall.n_items,
             "N": overall.n,
             "Alpha": round(overall.alpha, 3) if overall.alpha is not None else "–",
             "Omega": round(overall_omega, 3) if overall_omega is not None else "–",
@@ -163,7 +163,7 @@ with tab_scale:
 
 with tab_split:
     st.markdown("**Split-half-reliabilitet (odd-even)**")
-    scope_options = {"Alla items": None}
+    scope_options = {"Alla frågor": None}
     if dataset.n_subscales > 1:
         scope_options.update({s.name: s.id for s in q.subscales})
     scope_label = st.selectbox("Omfattning", scope_options.keys(), key="split_half_scope")
@@ -174,13 +174,13 @@ with tab_split:
     kpi_row[1].metric("Spearman-Brown (korrigerad)", f"{result.spearman_brown:.2f}" if result.spearman_brown is not None else "–")
     kpi_row[2].metric("Guttman split-half", f"{result.guttman:.2f}" if result.guttman is not None else "–")
     st.caption(
-        "Metod: items delas i udda/jämna grupper. Spearman-Brown korrigerar för att varje "
-        "halva har färre items än hela skalan; Guttmans lambda antar inte lika varians i halvorna."
+        "Metod: frågorna delas i udda/jämna grupper. Spearman-Brown korrigerar för att varje "
+        "halva har färre frågor än hela skalan; Guttmans lambda antar inte lika varians i halvorna."
     )
 
 with tab_retest:
     st.markdown("**Test-retest-reliabilitet**")
-    scope_options = {"Alla items": None}
+    scope_options = {"Alla frågor": None}
     if dataset.n_subscales > 1:
         scope_options.update({s.name: s.id for s in q.subscales})
     scope_label = st.selectbox("Omfattning", scope_options.keys(), key="retest_scope")

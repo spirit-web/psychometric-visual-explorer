@@ -18,11 +18,15 @@ def render_logo() -> None:
 
 
 def render_mode_toggles() -> None:
-    """Läroläge (Learning Mode) toggle and language selector - rendered
-    once in app.py, visible on every page via the sidebar. Läroläge makes
-    every existing ⓘ tooltip show a deeper explanation (see
-    components/concept_tooltip.py); by default tooltips stay short, on
-    the assumption the user already knows most concepts."""
+    """Läroläge (Learning Mode) toggle and language toggle - rendered once
+    in app.py, visible on every page via the sidebar (as high as Streamlit's
+    navigation API allows: st.navigation reserves the very top of the
+    sidebar for the page-link list itself, so these render directly below
+    it regardless of call order - there is no supported way to place custom
+    sidebar widgets above it). Läroläge makes every existing ⓘ tooltip show
+    a deeper explanation (see components/concept_tooltip.py); by default
+    tooltips stay short, on the assumption the user already knows most
+    concepts."""
     st.session_state.setdefault("pve_learning_mode", False)
     st.session_state["pve_learning_mode"] = st.sidebar.toggle(
         "🎓 Läroläge",
@@ -31,11 +35,9 @@ def render_mode_toggles() -> None:
     )
 
     st.session_state.setdefault("pve_language", "sv")
-    lang_labels = {"sv": "🇸🇪 Svenska", "en": "🇬🇧 English"}
-    lang_keys = list(lang_labels.keys())
-    st.session_state["pve_language"] = st.sidebar.selectbox(
-        "Språk / Language",
-        lang_keys,
-        index=lang_keys.index(st.session_state["pve_language"]),
-        format_func=lambda k: lang_labels[k],
+    is_english = st.sidebar.toggle(
+        "🇬🇧 English",
+        value=st.session_state["pve_language"] == "en",
+        help="Växlar navigeringsmenyn och startsidan mellan svenska (av) och engelska (på).",
     )
+    st.session_state["pve_language"] = "en" if is_english else "sv"
