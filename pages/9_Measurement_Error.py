@@ -30,13 +30,32 @@ precision = se.precision_label(me.sem, me.sd)
 # --- KPI row -------------------------------------------------
 kpi_cols = st.columns(4)
 with kpi_cols[0]:
-    kpi_card("🎯", "#DBEAFE", f"{me.sem:.2f}" if me.sem is not None else "–", "Standard Error of Measurement", caption="SEM")
+    kpi_card(
+        "🎯", "#DBEAFE", f"{me.sem:.2f}" if me.sem is not None else "–", "Standard Error of Measurement", caption="SEM",
+        tooltip=(
+            "Hur mycket en persons poäng kan variera av ren slump om de tog samma test igen utan att "
+            "ha förändrats. Ju lägre SEM, desto mer kan du lita på en enskild mätning."
+        ),
+    )
 with kpi_cols[1]:
-    kpi_card("✅", "#D1FAE5", f"{mrc:.1f}" if mrc is not None else "–", "Minimalt pålitligt förändringsvärde", caption="Reliable Change Index")
+    kpi_card(
+        "✅", "#D1FAE5", f"{mrc:.1f}" if mrc is not None else "–", "Minimalt pålitligt förändringsvärde", caption="Reliable Change Index",
+        tooltip=(
+            "Hur stor förändring i poäng som krävs mellan två mättillfällen för att räknas som en "
+            "verklig förändring - inte bara mätbrus. Central när du följer en klient över flera "
+            "sessioner: en mindre förändring än detta bör inte tolkas som förbättring eller försämring."
+        ),
+    )
 with kpi_cols[2]:
-    kpi_card("📈", "#EDE9FE", f"{me.alpha:.2f}" if me.alpha is not None else "–", "Reliabilitet (alpha)")
+    kpi_card(
+        "📈", "#EDE9FE", f"{me.alpha:.2f}" if me.alpha is not None else "–", "Reliabilitet (alpha)",
+        tooltip="Samma Cronbach's alpha som i Reliability Explorer - visas här eftersom SEM räknas direkt utifrån den.",
+    )
 with kpi_cols[3]:
-    kpi_card("📊", "#FFEDD5", precision, "Precision")
+    kpi_card(
+        "📊", "#FFEDD5", precision, "Precision",
+        tooltip="En sammanfattande bedömning av mätsäkerheten (baserad på SEM i relation till skalans spridning) - Hög/Måttlig/Låg.",
+    )
 
 st.write("")
 

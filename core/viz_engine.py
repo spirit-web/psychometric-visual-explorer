@@ -111,12 +111,18 @@ def horizontal_bar_chart(series: pd.Series, x_title: str, ascending: bool = True
 
 
 def correlation_heatmap(corr: pd.DataFrame) -> go.Figure:
+    # Anchor the low end of the scale at the data's actual minimum (capped at
+    # 0) rather than always -1: item correlations are almost always positive,
+    # so a fixed -1..1 range wastes half the color scale and makes every cell
+    # look the same shade of red. Factor loadings/correlations, which can be
+    # genuinely negative, keep their full range.
+    z_min = min(0.0, float(np.nanmin(corr.values)))
     fig = go.Figure(
         go.Heatmap(
             z=corr.values,
             x=list(corr.columns),
             y=list(corr.index),
-            zmin=-1,
+            zmin=z_min,
             zmax=1,
             colorscale="RdBu",
             reversescale=True,

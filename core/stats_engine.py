@@ -836,12 +836,15 @@ def validity_overview(
     dataset,
     response_process_status: str = "none",
     consequences_status: str = "none",
+    response_process_summary: str | None = None,
+    consequences_summary: str | None = None,
 ) -> list[ValiditySource]:
     """The five evidence sources from the Standards for Educational and
     Psychological Testing (AERA/APA/NCME). Content, internal structure, and
     relations-to-other-variables are derived from the data; response
     processes and consequences are not computable from a dataset and are
-    passed in as manually-set statuses from the page's own UI state."""
+    passed in as manually-set statuses from the page's own UI state (with an
+    optional summary override, e.g. a citation for a well-established test)."""
     q = dataset.questionnaire
     sources: list[ValiditySource] = []
 
@@ -856,7 +859,7 @@ def validity_overview(
             "response_processes",
             "Responsprocesser (Response Processes)",
             response_process_status,
-            "Manuellt dokumenterad status - se fliken för detaljer.",
+            response_process_summary or "Manuellt dokumenterad status - se fliken för detaljer.",
         )
     )
 
@@ -901,7 +904,8 @@ def validity_overview(
             "consequences",
             "Konsekvenser av testanvändning (Consequences)",
             consequences_status,
-            "Manuellt dokumenterad status - se Decision Support och Fairness Explorer för relaterad analys.",
+            consequences_summary
+            or "Manuellt dokumenterad status - se Decision Support och Fairness Explorer för relaterad analys.",
         )
     )
 

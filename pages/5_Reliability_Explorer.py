@@ -28,14 +28,27 @@ with kpi_cols[0]:
         f"{overall.alpha:.2f}" if overall.alpha is not None else "–",
         "Cronbach's alpha",
         caption=se.alpha_interpretation(overall.alpha),
+        tooltip=(
+            "Mäter intern konsistens - hur väl items i skalan samvarierar. Tumregel: ≥0.90 "
+            "utmärkt, ≥0.80 bra, ≥0.70 acceptabelt, <0.70 bör granskas."
+        ),
     )
 with kpi_cols[1]:
-    kpi_card("📋", "#D1FAE5", str(overall.n_items), "Items (frågor)", caption=f"{len(q.reverse_scored_ids)} omvänt")
+    kpi_card(
+        "📋", "#D1FAE5", str(overall.n_items), "Items (frågor)", caption=f"{len(q.reverse_scored_ids)} omvänt",
+        tooltip="Antal frågor (items) som ingår i skalan. 'Omvänt' anger hur många av dem som poängsätts baklänges (t.ex. en positivt formulerad fråga i ett ångesttest).",
+    )
 with kpi_cols[2]:
-    kpi_card("⚖️", "#EDE9FE", f"{mean_r:.2f}" if mean_r is not None else "–", "Medel inter-item r")
+    kpi_card(
+        "⚖️", "#EDE9FE", f"{mean_r:.2f}" if mean_r is not None else "–", "Medel inter-item r",
+        tooltip="Genomsnittlig korrelation mellan alla par av items. Bör ligga runt 0.15-0.50 - för lågt tyder på att items mäter olika saker, för högt tyder på onödigt upprepade frågor.",
+    )
 with kpi_cols[3]:
     ci_text = f"{ci_low:.2f} – {ci_high:.2f}" if ci_low is not None else "–"
-    kpi_card("📊", "#FFEDD5", ci_text, "95% KI (alpha)", caption="Konfidensintervall")
+    kpi_card(
+        "📊", "#FFEDD5", ci_text, "95% KI (alpha)", caption="Konfidensintervall",
+        tooltip="Intervallet där det sanna alpha-värdet troligen ligger, baserat på antal items och urvalsstorlek. Ett smalt intervall betyder en mer precis skattning.",
+    )
 
 st.write("")
 

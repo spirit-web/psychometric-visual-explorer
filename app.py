@@ -34,6 +34,20 @@ def home() -> None:
     )
     st.write("")
 
+    value_props = [
+        "Vill du veta var en specifik klient hamnar jämfört med normgruppen?",
+        "Vill du se om testet fungerar lika rättvist oavsett kön, ålder eller utbildning?",
+        "Vill du se vilka frågor som är viktigast — eller bygga ett eget test?",
+    ]
+    st.markdown(
+        "<ul style='color:#374151; font-size:1.02rem; line-height:1.9; "
+        "max-width:40rem; padding-left:1.2rem;'>"
+        + "".join(f"<li>{prop}</li>" for prop in value_props)
+        + "</ul>",
+        unsafe_allow_html=True,
+    )
+    st.write("")
+
     cards = [
         {
             "icon": "\U0001F4C1",

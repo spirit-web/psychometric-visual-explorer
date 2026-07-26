@@ -26,9 +26,23 @@ with kpi_cols[0]:
 with kpi_cols[1]:
     kpi_card("🧩", "#EDE9FE", str(dataset.n_subscales), "Delskalor")
 with kpi_cols[2]:
-    kpi_card("⚖️", "#FFEDD5", f"{scale.min}–{scale.max}", f"Svarsskala (Likert {scale.max - scale.min + 1})")
+    kpi_card(
+        "⚖️", "#FFEDD5", f"{scale.min}–{scale.max}", f"Svarsskala (Likert {scale.max - scale.min + 1})",
+        tooltip=(
+            "Antalet svarsalternativ per fråga, t.ex. 0-3 (\"Inte alls\" till \"Nästan varje dag\"). "
+            "En Likert-skala med fler steg ger mer detaljerad information men kan vara svårare att "
+            "svara konsekvent på."
+        ),
+    )
 with kpi_cols[3]:
-    kpi_card("👤", "#DBEAFE", str(len(reverse_ids)), "Omvänd item" if len(reverse_ids) == 1 else "Omvända items")
+    kpi_card(
+        "👤", "#DBEAFE", str(len(reverse_ids)), "Omvänd item" if len(reverse_ids) == 1 else "Omvända items",
+        tooltip=(
+            "Antal frågor som är formulerade \"åt andra hållet\" (t.ex. en positivt formulerad fråga i "
+            "ett test om ångest) och därför poängsätts baklänges innan de summeras ihop med övriga "
+            "frågor. Görs för att motverka slentrianmässiga svar."
+        ),
+    )
 
 st.write("")
 
@@ -57,7 +71,7 @@ with tab_overview:
         with header_cols[1]:
             concept_tooltip(
                 "Item-korrelationer",
-                "Pearson-korrelation mellan varje par av items. Höga positiva värden (mörkblått) "
+                "Pearson-korrelation mellan varje par av items. Höga positiva värden (mörkrött) "
                 "tyder på att items mäter samma underliggande konstrukt.",
             )
         corr = se.item_correlation_matrix(dataset)

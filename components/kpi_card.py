@@ -3,7 +3,14 @@
 import streamlit as st
 
 
-def kpi_card(icon: str, icon_bg: str, value: str, label: str, caption: str | None = None) -> None:
+def kpi_card(
+    icon: str,
+    icon_bg: str,
+    value: str,
+    label: str,
+    caption: str | None = None,
+    tooltip: str | None = None,
+) -> None:
     caption_html = f'<div style="color:#9AA4C7; font-size:0.78rem; margin-top:0.2rem;">{caption}</div>' if caption else ""
     st.markdown(
         f"""
@@ -19,6 +26,10 @@ def kpi_card(icon: str, icon_bg: str, value: str, label: str, caption: str | Non
         """,
         unsafe_allow_html=True,
     )
+    if tooltip:
+        with st.popover("ⓘ", width="content"):
+            st.markdown(f"**{label}**")
+            st.write(tooltip)
 
 
 def status_badge(status: str, text: str) -> str:

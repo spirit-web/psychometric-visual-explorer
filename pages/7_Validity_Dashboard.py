@@ -6,6 +6,7 @@ import streamlit as st
 from components.concept_tooltip import concept_tooltip
 from components.export_section import render_export_section
 from components.kpi_card import kpi_card, status_icon
+from core import plugin_engine as pe
 from core import stats_engine as se
 from core import viz_engine as ve
 from utils.session import require_dataset
@@ -24,10 +25,30 @@ STATUS_OPTIONS = {
 }
 STATUS_KEYS = list(STATUS_OPTIONS.keys())
 
+# For the bundled, well-established tests, pre-fill response-process and
+# consequences evidence from their published validation literature instead
+# of defaulting to "no information" - that default is honest for a custom
+# test built in Test Builder, but misleading for GAD-7/PHQ-9/Big Five, which
+# do have this evidence, just not entered by the current user.
+default_evidence = pe.default_validity_evidence(q.plugin_id)
+if "vd_response_process_status" not in st.session_state and "response_processes" in default_evidence:
+    st.session_state["vd_response_process_status"] = default_evidence["response_processes"][0]
+if "vd_consequences_status" not in st.session_state and "consequences" in default_evidence:
+    st.session_state["vd_consequences_status"] = default_evidence["consequences"][0]
+
 response_process_status = st.session_state.get("vd_response_process_status", "none")
 consequences_status = st.session_state.get("vd_consequences_status", "none")
 
-sources = se.validity_overview(dataset, response_process_status, consequences_status)
+response_default_status, response_default_summary = default_evidence.get("response_processes", (None, None))
+consequences_default_status, consequences_default_summary = default_evidence.get("consequences", (None, None))
+
+sources = se.validity_overview(
+    dataset,
+    response_process_status,
+    consequences_status,
+    response_process_summary=response_default_summary if response_process_status == response_default_status else None,
+    consequences_summary=consequences_default_summary if consequences_status == consequences_default_status else None,
+)
 sources_by_key = {s.key: s for s in sources}
 counts = se.validity_status_counts(sources)
 
@@ -107,6 +128,11 @@ with tab_response:
         "konstruktet avsåg. Detta går sällan att beräkna från enbart svarsdata - dokumentera det "
         "manuellt här, t.ex. via kognitiva intervjuer eller tänka-högt-studier."
     )
+    if response_process_status == response_default_status and response_default_summary:
+        st.info(
+            f"ℹ️ Förifyllt utifrån testets publicerade valideringslitteratur: {response_default_summary} "
+            "Ändra nedan om du vill dokumentera egen evidens istället."
+        )
     st.selectbox(
         "Evidensstatus",
         STATUS_KEYS,
@@ -179,6 +205,11 @@ with tab_consequences:
         "- t.ex. om beslut baserade på testet är rättvisa mellan grupper. Se Decision Support och "
         "Fairness Explorer för relaterad analys."
     )
+    if consequences_status == consequences_default_status and consequences_default_summary:
+        st.info(
+            f"ℹ️ Förifyllt utifrån testets publicerade valideringslitteratur: {consequences_default_summary} "
+            "Ändra nedan om du vill dokumentera egen evidens istället."
+        )
     st.selectbox(
         "Evidensstatus",
         STATUS_KEYS,

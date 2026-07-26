@@ -36,18 +36,30 @@ st.write("")
 # --- KPI row -------------------------------------------------
 kpi_cols = st.columns(4)
 with kpi_cols[0]:
-    kpi_card("🧩", "#DBEAFE", str(pa.suggested_n_factors), "Föreslagna faktorer", caption="Parallel analysis")
+    kpi_card(
+        "🧩", "#DBEAFE", str(pa.suggested_n_factors), "Föreslagna faktorer", caption="Parallel analysis",
+        tooltip="Det statistiskt motiverade antalet faktorer att behålla, baserat på jämförelse med slumpdata av samma storlek. Använd detta som riktmärke för värdet ovan.",
+    )
 with kpi_cols[1]:
     explained = f"{efa.variance_explained['Cumulative Var'].iloc[-1] * 100:.0f}%" if efa is not None else "–"
-    kpi_card("📊", "#D1FAE5", explained, "Förklarad varians", caption="av total varians")
+    kpi_card(
+        "📊", "#D1FAE5", explained, "Förklarad varians", caption="av total varians",
+        tooltip="Hur stor andel av all variation i svaren som de extraherade faktorerna tillsammans fångar upp. Högre är bättre, men sällan över 60-70% ens för bra test.",
+    )
 with kpi_cols[2]:
     kmo_text = f"{adequacy.kmo:.2f}" if adequacy.kmo is not None else "–"
-    kpi_card("✅", "#EDE9FE", kmo_text, "KMO", caption="Sampling adequacy")
+    kpi_card(
+        "✅", "#EDE9FE", kmo_text, "KMO", caption="Sampling adequacy",
+        tooltip="Kaiser-Meyer-Olkin-måttet: om datan lämpar sig för faktoranalys överhuvudtaget. ≥0.80 bra, ≥0.60 acceptabelt, under det bör faktoranalys tolkas med försiktighet.",
+    )
 with kpi_cols[3]:
     bartlett_text = "< .001" if adequacy.bartlett_p is not None and adequacy.bartlett_p < 0.001 else (
         f"{adequacy.bartlett_p:.3f}" if adequacy.bartlett_p is not None else "–"
     )
-    kpi_card("🔬", "#FFEDD5", bartlett_text, "Bartlett's test (p)", caption="Signifikant om < .05")
+    kpi_card(
+        "🔬", "#FFEDD5", bartlett_text, "Bartlett's test (p)", caption="Signifikant om < .05",
+        tooltip="Testar om items korrelerar tillräckligt med varandra för att faktoranalys ska vara meningsfull. Ett lågt p-värde (< .05) är det önskade utfallet här.",
+    )
 
 st.write("")
 
@@ -100,7 +112,15 @@ with tab_overview:
             st.info("Otillräcklig data för scree plot.")
 
     with col_fit:
-        st.markdown("**Modellanpassning**")
+        header_cols = st.columns([5, 1])
+        header_cols[0].markdown("**Modellanpassning**")
+        with header_cols[1]:
+            concept_tooltip(
+                "Modellanpassning",
+                "Hur väl den valda faktorlösningen stämmer med de observerade korrelationerna. "
+                "God passning kräver RMSEA < 0.08 OCH (om beräknat) CFI ≥ 0.90 - annars visas "
+                "\"Måttlig\", vilket ofta betyder att ett annat antal faktorer bör provas.",
+            )
         if efa is not None and efa.fit.rmsea is not None:
             good_fit = efa.fit.rmsea < 0.08 and (efa.fit.cfi is None or efa.fit.cfi >= 0.90)
             if good_fit:

@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from core.plugin_engine import load_all_plugins, load_plugin, match_plugin
+from core.plugin_engine import default_validity_evidence, load_all_plugins, load_plugin, match_plugin
 
 PLUGINS_DIR = Path(__file__).resolve().parent.parent / "plugins"
 
@@ -40,3 +40,16 @@ def test_match_plugin_returns_none_for_unrelated_columns():
     plugins = load_all_plugins(PLUGINS_DIR)
     result = match_plugin(["foo", "bar", "baz"], plugins)
     assert result is None
+
+
+def test_default_validity_evidence_covers_all_three_bundled_tests():
+    for plugin_id in ("gad7", "phq9", "ipip_bigfive"):
+        evidence = default_validity_evidence(plugin_id)
+        assert set(evidence.keys()) == {"response_processes", "consequences"}
+        for status, summary in evidence.values():
+            assert status in {"none", "limited", "moderate", "strong"}
+            assert len(summary) > 20
+
+
+def test_default_validity_evidence_empty_for_custom_test():
+    assert default_validity_evidence("some_custom_test") == {}

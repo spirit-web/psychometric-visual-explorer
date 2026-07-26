@@ -243,3 +243,58 @@ def questionnaire_from_tables(
         return questionnaire, None
     except (ValidationError, ValueError, TypeError) as exc:
         return None, f"Ogiltig testdefinition: {exc}"
+
+
+# --- Validity Dashboard: default evidence for well-established bundled tests ---
+
+# Response-process and consequences evidence can't be computed from a
+# dataset - for the three well-established bundled instruments, this reflects
+# evidence already documented in their original validation literature, not a
+# claim about a specific local sample. Custom tests built in Test Builder
+# correctly default to "no information" until the user documents it.
+_DEFAULT_VALIDITY_EVIDENCE: dict[str, dict[str, tuple[str, str]]] = {
+    "gad7": {
+        "response_processes": (
+            "moderate",
+            "Spitzer RL, Kroenke K, Williams JB, Löwe B (2006) validerade GAD-7 mot strukturerade "
+            "kliniska intervjuer, vilket ger indirekt stöd för att items tolkas som avsett.",
+        ),
+        "consequences": (
+            "moderate",
+            "GAD-7 används brett i primärvård för screening och uppföljning av ångestsymtom; "
+            "etablerad klinisk användning sedan originalstudien (Spitzer et al., 2006).",
+        ),
+    },
+    "phq9": {
+        "response_processes": (
+            "moderate",
+            "Kroenke K, Spitzer RL, Williams JB (2001) validerade PHQ-9 mot klinikerbedömd "
+            "diagnostik, vilket ger indirekt stöd för att items tolkas som avsett.",
+        ),
+        "consequences": (
+            "moderate",
+            "PHQ-9 används brett för att följa behandlingssvar över tid och för diagnostisk "
+            "screening i primärvård (Kroenke et al., 2001).",
+        ),
+    },
+    "ipip_bigfive": {
+        "response_processes": (
+            "moderate",
+            "IPIP-items har utvecklats och förfinats iterativt genom omfattande item-utvärdering "
+            "(Goldberg, 1992).",
+        ),
+        "consequences": (
+            "limited",
+            "Big Five-mått som detta används ofta i forskning och urval, men självskattningar av "
+            "personlighet är kända för att kunna påverkas av social önskvärdhet i högriskkontexter "
+            "(t.ex. anställningsintervjuer) - bör tolkas med försiktighet i sådana sammanhang.",
+        ),
+    },
+}
+
+
+def default_validity_evidence(plugin_id: str) -> dict[str, tuple[str, str]]:
+    """(status, summary) defaults for response-process/consequences evidence,
+    for the bundled well-established tests. Empty dict for anything else -
+    including custom tests, where "no information" is the honest default."""
+    return _DEFAULT_VALIDITY_EVIDENCE.get(plugin_id, {})
