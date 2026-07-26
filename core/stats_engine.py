@@ -943,6 +943,49 @@ def norm_stats(dataset, subscale_id: str | None = None) -> NormStats:
     return NormStats(float(series.mean()), float(series.std()), len(series))
 
 
+def score_manual_responses(dataset, responses: dict[str, float], subscale_id: str | None = None) -> float | None:
+    """Score a single new respondent's raw item answers (e.g. entered by
+    hand for a client who isn't a row in the loaded dataset) using the same
+    reverse-scoring and aggregation rule as core/import_engine.build_dataset.
+    Returns None if no items in the subscale have an answer."""
+    q = dataset.questionnaire
+    if subscale_id is None:
+        subscale = q.subscales[0] if q.subscales else None
+    else:
+        subscale = q.get_subscale(subscale_id)
+    if subscale is None:
+        return None
+
+    scale_min, scale_max = q.response_scale.range
+    items_by_id = {item.id: item for item in q.items}
+    values = []
+    for item_id in subscale.item_ids:
+        if item_id not in responses or responses[item_id] is None:
+            continue
+        value = float(responses[item_id])
+        item = items_by_id.get(item_id)
+        if item is not None and item.reverse_scored:
+            value = (scale_min + scale_max) - value
+        values.append(value)
+
+    if not values:
+        return None
+    if subscale.scoring_method == "mean":
+        return sum(values) / len(values)
+    return sum(values)
+
+
+def cutoff_category(questionnaire, raw_score: float) -> str | None:
+    """Which of the test's defined severity/cutoff bands a raw score falls
+    into (e.g. GAD-7's "Mild", "Måttlig", "Svår"), or None if the test has
+    no cutoffs defined or the score falls outside all of them."""
+    for cutoff in questionnaire.cutoffs:
+        lo, hi = cutoff.range
+        if lo <= raw_score <= hi:
+            return cutoff.label
+    return None
+
+
 def raw_to_z(raw: float, mean: float, sd: float) -> float:
     return (raw - mean) / sd if sd else 0.0
 

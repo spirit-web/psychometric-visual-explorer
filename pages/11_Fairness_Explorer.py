@@ -3,6 +3,7 @@
 import pandas as pd
 import streamlit as st
 
+from components.client_selector import select_or_enter_client
 from components.concept_tooltip import concept_tooltip
 from components.export_section import render_export_section
 from components.kpi_card import kpi_card, status_icon
@@ -49,7 +50,7 @@ with kpi_cols[3]:
 
 st.write("")
 
-tab_overview, tab_invariance = st.tabs(["Översikt", "DIF & Measurement Invariance"])
+tab_overview, tab_client, tab_invariance = st.tabs(["Översikt", "Klient vs. grupper", "DIF & Measurement Invariance"])
 
 with tab_overview:
     col_table, col_chart = st.columns(2)
@@ -106,6 +107,29 @@ with tab_overview:
         ]
     )
     st.dataframe(fairness_detail_df, width="stretch", hide_index=True)
+
+with tab_client:
+    st.caption(
+        "Placera en enskild klients resultat mot varje grupps medelvärde - oavsett vilken grupp "
+        "klienten själv tillhör, ser du om resultatet ser typiskt ut jämfört med alla grupper."
+    )
+    client_score = select_or_enter_client(dataset, subscale_id, key_prefix="fairness")
+
+    if client_score is None:
+        st.info("Otillräcklig data för att beräkna klientens poäng.")
+    else:
+        labels = [f"{r.dimension}: {r.comparison_group} vs {r.reference_group}" for r in results]
+        ref_means = [r.mean_reference for r in results]
+        comp_means = [r.mean_comparison for r in results]
+        client_fig = ve.group_means_with_client_chart(
+            labels, ref_means, comp_means, "Referensgrupp", "Jämförelsegrupp", client_score
+        )
+        st.plotly_chart(client_fig, width="stretch")
+        st.metric("Klientens poäng", f"{client_score:g}")
+        st.caption(
+            "Om klientens poäng ligger nära alla gruppers medelvärden oavsett grupptillhörighet "
+            "är resultatet svårt att förklara med systematisk bias mellan grupperna."
+        )
 
 with tab_invariance:
     st.write(

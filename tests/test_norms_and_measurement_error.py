@@ -127,3 +127,77 @@ def test_all_person_confidence_intervals_match_formula():
     row = table.iloc[0]
     assert row["95% KI nedre"] == pytest.approx(row["Observerad poäng"] - 1.96 * me.sem, abs=0.05)
     assert row["95% KI övre"] == pytest.approx(row["Observerad poäng"] + 1.96 * me.sem, abs=0.05)
+
+
+def _dataset_with_reverse_item(n=50, seed=1) -> Dataset:
+    rng = np.random.default_rng(seed)
+    q = Questionnaire(
+        plugin_id="demo_rev",
+        plugin_version="1.0",
+        test_name="Demo",
+        full_name="Demo Test",
+        response_scale=ResponseScale(min=0, max=3),
+        items=[
+            Item(id="D1", text="Item 1", subscale="total", reverse_scored=False),
+            Item(id="D2", text="Item 2", subscale="total", reverse_scored=True),
+            Item(id="D3", text="Item 3", subscale="total", reverse_scored=False),
+        ],
+        subscales=[Subscale(id="total", name="Total", item_ids=["D1", "D2", "D3"], score_range=(0, 9))],
+    )
+    raw = pd.DataFrame({"respondent_id": np.arange(1, n + 1), "D1": rng.integers(0, 4, n), "D2": rng.integers(0, 4, n), "D3": rng.integers(0, 4, n)})
+    scored = raw.copy()
+    return Dataset(raw=raw, scored=scored, questionnaire=q, column_mapping={})
+
+
+def test_score_manual_responses_applies_reverse_scoring():
+    dataset = _dataset_with_reverse_item()
+    # D2 is reverse-scored (0-3 scale): raw 1 -> reverse-scored 2
+    score = se.score_manual_responses(dataset, {"D1": 3, "D2": 1, "D3": 0})
+    assert score == pytest.approx(3 + 2 + 0)
+
+
+def test_score_manual_responses_none_when_no_answers():
+    dataset = _dataset_with_reverse_item()
+    assert se.score_manual_responses(dataset, {}) is None
+
+
+def test_score_manual_responses_ignores_missing_items():
+    dataset = _dataset_with_reverse_item()
+    score = se.score_manual_responses(dataset, {"D1": 2})
+    assert score == pytest.approx(2)
+
+
+def test_cutoff_category_finds_matching_band():
+    from core.data_model import Cutoff
+
+    q = Questionnaire(
+        plugin_id="demo_cut",
+        plugin_version="1.0",
+        test_name="Demo",
+        full_name="Demo Test",
+        response_scale=ResponseScale(min=0, max=3),
+        items=[Item(id="D1", text="Item 1", subscale="total", reverse_scored=False)],
+        subscales=[Subscale(id="total", name="Total", item_ids=["D1"], score_range=(0, 21))],
+        cutoffs=[
+            Cutoff(label="Minimal", range=(0, 4)),
+            Cutoff(label="Mild", range=(5, 9)),
+            Cutoff(label="Måttlig", range=(10, 14)),
+            Cutoff(label="Svår", range=(15, 21)),
+        ],
+    )
+    assert se.cutoff_category(q, 3) == "Minimal"
+    assert se.cutoff_category(q, 12) == "Måttlig"
+    assert se.cutoff_category(q, 21) == "Svår"
+
+
+def test_cutoff_category_none_when_no_cutoffs_defined():
+    q = Questionnaire(
+        plugin_id="demo_nocut",
+        plugin_version="1.0",
+        test_name="Demo",
+        full_name="Demo Test",
+        response_scale=ResponseScale(min=0, max=3),
+        items=[Item(id="D1", text="Item 1", subscale="total", reverse_scored=False)],
+        subscales=[Subscale(id="total", name="Total", item_ids=["D1"], score_range=(0, 3))],
+    )
+    assert se.cutoff_category(q, 2) is None

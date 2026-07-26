@@ -2,6 +2,7 @@
 
 import streamlit as st
 
+from components.client_selector import select_or_enter_client
 from components.concept_tooltip import concept_tooltip
 from components.export_section import render_export_section
 from components.kpi_card import kpi_card
@@ -13,7 +14,7 @@ dataset = require_dataset()
 q = dataset.questionnaire
 
 st.title("Norm Explorer")
-st.caption(f"Jämför resultat med normgruppen för {q.test_name}")
+st.caption(f"Jämför en klients resultat med normgruppen för {q.test_name}")
 
 subscale_options = {s.name: s.id for s in q.subscales} if len(q.subscales) > 1 else {}
 if subscale_options:
@@ -23,6 +24,7 @@ else:
     subscale_id = q.subscales[0].id if q.subscales else None
 
 stats = se.norm_stats(dataset, subscale_id)
+me = se.measurement_error(dataset, subscale_id)
 
 # --- KPI row -------------------------------------------------
 kpi_cols = st.columns(4)
@@ -43,17 +45,17 @@ st.info(
 
 st.write("")
 
-tab_overview, tab_table = st.tabs(["Översikt", "Omvandlingstabell"])
+tab_overview, tab_table = st.tabs(["Klientöversikt", "Omvandlingstabell"])
 
 with tab_overview:
-    ids = se.person_ids(dataset)
-    person_id = st.selectbox("Välj person", ids, format_func=lambda pid: f"Person {pid}")
-    raw_score = se.person_raw_score(dataset, person_id, subscale_id)
+    raw_score = select_or_enter_client(dataset, subscale_id, key_prefix="norm")
 
     if raw_score is None or stats.mean is None or stats.sd is None or stats.sd == 0:
         st.info("Otillräcklig data för att beräkna normjämförelse.")
     else:
         conversion = se.score_conversion(raw_score, stats.mean, stats.sd)
+        category = se.cutoff_category(q, raw_score)
+        ci = se.confidence_interval(raw_score, me.sem) if me.sem is not None else None
 
         col_chart, col_summary = st.columns([2, 1])
         with col_chart:
@@ -79,30 +81,49 @@ with tab_overview:
 
         with col_summary:
             st.markdown("**Resultatsammanfattning**")
+            category_row = (
+                f"""<div style="display:flex; justify-content:space-between; margin-bottom:0.7rem;">
+                        <span style="color:#6B7280;">Nivå</span>
+                        <b>{category}</b>
+                    </div>"""
+                if category
+                else ""
+            )
+            ci_row = (
+                f"""<div style="display:flex; justify-content:space-between; margin-bottom:0.7rem;">
+                        <span style="color:#6B7280;">95% KI (mätfel)</span>
+                        <b>{ci[0]:.1f} – {ci[1]:.1f}</b>
+                    </div>"""
+                if ci is not None
+                else ""
+            )
             st.markdown(
                 f"""
                 <div class="pve-card">
                     <div style="display:flex; justify-content:space-between; margin-bottom:0.7rem;">
-                        <span style="color:#6B7280;">Ditt resultat</span>
-                        <b>{conversion.percentile:.0f} percentil</b>
+                        <span style="color:#6B7280;">Råpoäng</span>
+                        <b>{raw_score:g}</b>
+                    </div>
+                    {category_row}
+                    <div style="display:flex; justify-content:space-between; margin-bottom:0.7rem;">
+                        <span style="color:#6B7280;">Percentil</span>
+                        <b>{conversion.percentile:.0f}</b>
                     </div>
                     <div style="display:flex; justify-content:space-between; margin-bottom:0.7rem;">
                         <span style="color:#6B7280;">Jämfört med medel</span>
                         <b>{conversion.z:+.2f} SD</b>
                     </div>
-                    <div style="display:flex; justify-content:space-between; margin-bottom:0.7rem;">
-                        <span style="color:#6B7280;">Procent över</span>
-                        <b>{100 - conversion.percentile:.0f}%</b>
-                    </div>
-                    <div style="display:flex; justify-content:space-between;">
-                        <span style="color:#6B7280;">Procent under</span>
-                        <b>{conversion.percentile:.0f}%</b>
-                    </div>
+                    {ci_row}
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
             st.info(f"ℹ️ Resultatet ligger högre än {conversion.percentile:.0f}% av personerna i normgruppen.")
+            if ci is not None:
+                st.caption(
+                    f"95% KI byggt på mätfelet (SEM = {me.sem:.2f}) - se Measurement Error för djupare analys, "
+                    "inklusive om en förändring över tid är statistiskt pålitlig."
+                )
 
 with tab_table:
     header_cols = st.columns([5, 1])

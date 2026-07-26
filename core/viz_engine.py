@@ -290,6 +290,26 @@ def group_comparison_bar_chart(labels: list[str], d_values: list[float]) -> go.F
     return fig
 
 
+def group_means_with_client_chart(labels: list[str], ref_means: list[float], comp_means: list[float], reference_label: str, comparison_label: str, client_score: float | None) -> go.Figure:
+    """Horizontal bars of each group's mean score per dimension, with an
+    optional vertical line marking a specific client's score - lets you see
+    at a glance whether the client's result would look 'typical' regardless
+    of which group they belong to."""
+    fig = go.Figure()
+    fig.add_trace(go.Bar(name=reference_label, y=labels, x=ref_means, orientation="h", marker_color=COLOR_PRIMARY))
+    fig.add_trace(go.Bar(name=comparison_label, y=labels, x=comp_means, orientation="h", marker_color=COLOR_WARNING))
+    if client_score is not None:
+        fig.add_vline(x=client_score, line_dash="dash", line_color=COLOR_BAD, annotation_text="Klient", annotation_position="top")
+    fig.update_layout(
+        barmode="group",
+        xaxis_title="Medelpoäng",
+        height=max(280, 60 * len(labels)),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02),
+        **_LAYOUT_DEFAULTS,
+    )
+    return fig
+
+
 def precision_recall_chart(precision, recall) -> go.Figure:
     fig = go.Figure(go.Scatter(x=recall, y=precision, mode="lines", line=dict(color=COLOR_PRIMARY, width=3), fill="tozeroy"))
     fig.update_layout(xaxis_title="Recall (Sensitivitet)", yaxis_title="Precision (PPV)", height=380, **_LAYOUT_DEFAULTS)
