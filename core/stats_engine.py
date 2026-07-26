@@ -288,8 +288,8 @@ class ItemStats:
 
 
 def item_level_table(dataset, subscale_id: str | None = None) -> list[ItemStats]:
-    """Per-item descriptive + reliability contribution table, used by both
-    the Test Profile Explorer and the Reliability Explorer."""
+    """Per-item descriptive + reliability contribution table, used by the
+    Reliability Explorer."""
     q = dataset.questionnaire
     subscale = q.get_subscale(subscale_id) if subscale_id else None
     items = [i for i in q.items if subscale is None or i.id in subscale.item_ids]

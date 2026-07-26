@@ -65,7 +65,7 @@ LEARNING_MODULES: list[LearningModule] = [
                 "antas mäta gemensamt - motsvarar theta i faktoranalys.",
             ),
         ],
-        related_pages=["Dataset Overview", "Test Profile Explorer"],
+        related_pages=["Dataset Overview"],
     ),
     LearningModule(
         key="testutveckling",

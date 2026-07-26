@@ -119,10 +119,9 @@ def home() -> None:
 
 PAGES = [
     st.Page(home, title="Home", icon=":material/home:", default=True, url_path="home"),
-    st.Page("pages/1_Import_Wizard.py", title="Import Wizard", icon=":material/upload_file:"),
+    st.Page("pages/1_Import_Wizard.py", title="Importera Tester", icon=":material/upload_file:"),
     st.Page("pages/2_Dataset_Overview.py", title="Dataset Overview", icon=":material/dataset:"),
     st.Page("pages/3_Psychometric_QC.py", title="Psychometric QC", icon=":material/verified:"),
-    st.Page("pages/4_Test_Profile_Explorer.py", title="Test Profile Explorer", icon=":material/list_alt:"),
     st.Page("pages/5_Reliability_Explorer.py", title="Reliability Explorer", icon=":material/speed:"),
     st.Page("pages/6_Factor_Explorer.py", title="Factor Explorer", icon=":material/scatter_plot:"),
     st.Page("pages/7_Validity_Dashboard.py", title="Validity Dashboard", icon=":material/track_changes:"),

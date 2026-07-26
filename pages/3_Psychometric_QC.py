@@ -91,5 +91,5 @@ with col_back:
     if st.button("Tillbaka", width="stretch"):
         st.switch_page("pages/2_Dataset_Overview.py")
 with col_next:
-    if st.button("Fortsätt till Test Profile Explorer →", type="primary", width="stretch"):
-        st.switch_page("pages/4_Test_Profile_Explorer.py")
+    if st.button("Fortsätt till Reliability Explorer →", type="primary", width="stretch"):
+        st.switch_page("pages/5_Reliability_Explorer.py")

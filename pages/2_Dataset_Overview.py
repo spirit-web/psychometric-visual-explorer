@@ -13,8 +13,18 @@ from utils.session import require_dataset
 dataset = require_dataset()
 q = dataset.questionnaire
 
-st.title("Dataset Overview")
-st.caption(f"Översikt av ditt {q.test_name}-dataset ({q.full_name})")
+col_title, col_new = st.columns([5, 1])
+with col_title:
+    st.title("Dataset Overview")
+    st.caption(f"Översikt av ditt {q.test_name}-dataset ({q.full_name})")
+with col_new:
+    st.write("")
+    if st.button("📤 Ladda nytt dataset", width="stretch"):
+        st.session_state["pve_dataset"] = None
+        st.session_state["iw_step"] = 1
+        st.session_state["iw_raw_df"] = None
+        st.session_state["iw_auto_matched"] = False
+        st.switch_page("pages/1_Import_Wizard.py")
 
 # --- KPI row -------------------------------------------------
 kpi_cols = st.columns(4)
@@ -26,6 +36,32 @@ with kpi_cols[2]:
     kpi_card("🧩", "#EDE9FE", str(dataset.n_subscales), "Delskalor")
 with kpi_cols[3]:
     kpi_card("📉", "#FFEDD5", f"{dataset.missing_pct:.1f}%", "Total bortfall")
+
+st.write("")
+
+# --- Descriptive stats (moved up - useful to see early) -------------------------------------------------
+header_cols = st.columns([5, 1])
+header_cols[0].markdown("**Beskrivande statistik (totalpoäng)**")
+with header_cols[1]:
+    concept_tooltip(
+        "Beskrivande statistik",
+        "Sammanfattar fördelningen av totalpoäng per delskala: medelvärde, standardavvikelse "
+        "(SD), min-max samt skevhet (snedhet) och kurtosis (toppighet) i fördelningen.",
+    )
+desc_rows = []
+for d in se.descriptive_stats_by_subscale(dataset):
+    desc_rows.append(
+        {
+            "Delskala": d.subscale_name,
+            "N": d.n,
+            "Mean": round(d.mean, 2) if d.mean is not None else "–",
+            "SD": round(d.sd, 2) if d.sd is not None else "–",
+            "Min–Max": f"{d.minimum:g}–{d.maximum:g}" if d.minimum is not None else "–",
+            "Skewness": round(d.skewness, 2) if d.skewness is not None else "–",
+        }
+    )
+desc_df = pd.DataFrame(desc_rows)
+st.dataframe(desc_df, width="stretch", hide_index=True)
 
 st.write("")
 
@@ -59,8 +95,8 @@ with col_missing:
 
 st.write("")
 
-# --- Demographics / descriptive stats -------------------------------------------------
-col_demo, col_desc = st.columns(2)
+# --- Demographics / reliability snapshot -------------------------------------------------
+col_demo, col_rel = st.columns(2)
 with col_demo:
     st.markdown("**Demografi – Kön**")
     gender = se.demographic_breakdown(dataset, "gender")
@@ -69,34 +105,6 @@ with col_demo:
     else:
         st.info("Ingen könsvariabel hittades i datasetet.")
 
-with col_desc:
-    header_cols = st.columns([5, 1])
-    header_cols[0].markdown("**Beskrivande statistik (totalpoäng)**")
-    with header_cols[1]:
-        concept_tooltip(
-            "Beskrivande statistik",
-            "Sammanfattar fördelningen av totalpoäng per delskala: medelvärde, standardavvikelse "
-            "(SD), min-max samt skevhet (snedhet) och kurtosis (toppighet) i fördelningen.",
-        )
-    desc_rows = []
-    for d in se.descriptive_stats_by_subscale(dataset):
-        desc_rows.append(
-            {
-                "Delskala": d.subscale_name,
-                "N": d.n,
-                "Mean": round(d.mean, 2) if d.mean is not None else "–",
-                "SD": round(d.sd, 2) if d.sd is not None else "–",
-                "Min–Max": f"{d.minimum:g}–{d.maximum:g}" if d.minimum is not None else "–",
-                "Skewness": round(d.skewness, 2) if d.skewness is not None else "–",
-            }
-        )
-    desc_df = pd.DataFrame(desc_rows)
-    st.dataframe(desc_df, width="stretch", hide_index=True)
-
-st.write("")
-
-# --- Reliability snapshot / data quality -------------------------------------------------
-col_rel, col_qc = st.columns(2)
 with col_rel:
     header_cols = st.columns([5, 1])
     header_cols[0].markdown("**Reliabilitet (Cronbach's alpha)**")
@@ -120,20 +128,83 @@ with col_rel:
     st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
     st.caption("Fullständig reliabilitetsanalys finns i Reliability Explorer.")
 
-with col_qc:
-    st.markdown("**Datakvalitet**")
-    summary = se.quality_summary(dataset)
-    label = {"good": "Bra", "warning": "Bör granskas", "bad": "Problem"}[summary.status]
-    st.markdown(
-        f"""
-        <div class="pve-card" style="display:flex; flex-direction:column; justify-content:center; height:100%;">
-            <div style="font-size:1.6rem;">{status_icon(summary.status)} <b>{label}</b></div>
-            <div style="color:#6B7280; margin-top:0.4rem;">{summary.message}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+st.markdown("**Datakvalitet**")
+summary = se.quality_summary(dataset)
+label = {"good": "Bra", "warning": "Bör granskas", "bad": "Problem"}[summary.status]
+st.markdown(
+    f"""
+    <div class="pve-card">
+        <div style="font-size:1.6rem;">{status_icon(summary.status)} <b>{label}</b></div>
+        <div style="color:#6B7280; margin-top:0.4rem;">{summary.message}</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+st.caption("Detaljerad kvalitetskontroll finns i Psychometric QC.")
+
+st.write("")
+
+# --- Testprofil: struktur, korrelationer och svarsfördelning per item -------------------------------------------------
+st.markdown("### Testprofil")
+scale = q.response_scale
+reverse_ids = q.reverse_scored_ids
+profile_kpi_cols = st.columns(2)
+with profile_kpi_cols[0]:
+    kpi_card(
+        "⚖️", "#FFEDD5", f"{scale.min}–{scale.max}", f"Svarsskala (Likert {scale.max - scale.min + 1})",
+        tooltip=(
+            "Antalet svarsalternativ per fråga, t.ex. 0-3 (\"Inte alls\" till \"Nästan varje dag\"). "
+            "En Likert-skala med fler steg ger mer detaljerad information men kan vara svårare att "
+            "svara konsekvent på."
+        ),
     )
-    st.caption("Detaljerad kvalitetskontroll finns i Psychometric QC.")
+with profile_kpi_cols[1]:
+    kpi_card(
+        "👤", "#DBEAFE", str(len(reverse_ids)), "Omvänt item" if len(reverse_ids) == 1 else "Omvända items",
+        tooltip=(
+            "Antal frågor som är formulerade \"åt andra hållet\" (t.ex. en positivt formulerad fråga i "
+            "ett test om ångest) och därför poängsätts baklänges innan de summeras ihop med övriga "
+            "frågor. Görs för att motverka slentrianmässiga svar."
+        ),
+    )
+
+st.write("")
+col_corr, col_dist_item = st.columns(2)
+with col_corr:
+    header_cols = st.columns([5, 1])
+    header_cols[0].markdown("**Korrelationer mellan items**")
+    with header_cols[1]:
+        concept_tooltip(
+            "Item-korrelationer",
+            "Pearson-korrelation mellan varje par av items. Höga positiva värden (mörkrött) "
+            "tyder på att items mäter samma underliggande konstrukt.",
+        )
+    corr = se.item_correlation_matrix(dataset)
+    corr_fig = None
+    if not corr.empty:
+        corr_fig = ve.correlation_heatmap(corr)
+        st.plotly_chart(corr_fig, width="stretch", key="corr_heatmap_overview")
+    else:
+        st.info("För få items för en korrelationsmatris.")
+
+with col_dist_item:
+    header_cols = st.columns([5, 1])
+    header_cols[0].markdown("**Svarsfördelning per item**")
+    with header_cols[1]:
+        concept_tooltip(
+            "Svarsfördelning per item",
+            "Andel svar i varje kategori för respektive item. Används för att upptäcka "
+            "golv-/takeffekter eller items som beter sig annorlunda än övriga.",
+        )
+    item_dist = se.response_distribution_by_item(dataset)
+    item_dist_fig = None
+    if not item_dist.empty:
+        label_map = {item.id: f"{item.id} – {item.text}" for item in q.items}
+        item_dist_labeled = item_dist.rename(index=label_map)
+        item_dist_fig = ve.stacked_response_distribution_chart(item_dist_labeled)
+        st.plotly_chart(item_dist_fig, width="stretch")
+    else:
+        st.info("Inga items att visa.")
 
 st.write("")
 
@@ -141,12 +212,17 @@ if q.source_citation:
     st.info(f"ℹ️ {q.source_citation}")
 
 st.write("")
+export_figures = {"svarsfordelning": dist_fig, "bortfall_per_item": missing_fig}
+if corr_fig is not None:
+    export_figures["item_korrelationer"] = corr_fig
+if item_dist_fig is not None:
+    export_figures["svarsfordelning_per_item"] = item_dist_fig
 render_export_section(
     dataset,
     "dataset_overview",
     table=desc_df,
     table_label="Beskrivande statistik",
-    figures={"svarsfordelning": dist_fig, "bortfall_per_item": missing_fig},
+    figures=export_figures,
 )
 
 st.write("")

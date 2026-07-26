@@ -9,7 +9,6 @@ from utils.learning_content import LEARNING_MODULES
 PAGE_PATHS = {
     "Dataset Overview": "pages/2_Dataset_Overview.py",
     "Psychometric QC": "pages/3_Psychometric_QC.py",
-    "Test Profile Explorer": "pages/4_Test_Profile_Explorer.py",
     "Reliability Explorer": "pages/5_Reliability_Explorer.py",
     "Factor Explorer": "pages/6_Factor_Explorer.py",
     "Validity Dashboard": "pages/7_Validity_Dashboard.py",
