@@ -2,6 +2,8 @@
 
 import streamlit as st
 
+from utils.learning_content import find_deeper_explanation
+
 
 def kpi_card(
     icon: str,
@@ -30,6 +32,12 @@ def kpi_card(
         with st.popover("ⓘ", width="content"):
             st.markdown(f"**{label}**")
             st.write(tooltip)
+            if st.session_state.get("pve_learning_mode"):
+                deeper = find_deeper_explanation(label)
+                if deeper:
+                    st.divider()
+                    st.caption("📖 Läroläge – fördjupning")
+                    st.write(deeper)
 
 
 def status_badge(status: str, text: str) -> str:

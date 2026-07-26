@@ -304,3 +304,17 @@ LEARNING_MODULES: list[LearningModule] = [
 
 def get_module(key: str) -> LearningModule | None:
     return next((m for m in LEARNING_MODULES if m.key == key), None)
+
+
+def find_deeper_explanation(label: str) -> str | None:
+    """Best-effort match of a components.concept_tooltip label (e.g.
+    "Cronbach's alpha") against this module's concept terms, so Läroläge
+    (Learning Mode) can show a more thorough explanation without every
+    tooltip call site needing to know about the learning content module."""
+    label_lower = label.lower()
+    for module in LEARNING_MODULES:
+        for concept in module.concepts:
+            term_lower = concept.term.lower()
+            if label_lower in term_lower or term_lower in label_lower:
+                return concept.explanation
+    return None
