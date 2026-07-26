@@ -59,6 +59,10 @@ st.write("")
 tab_overview, tab_cutoffs = st.tabs(["Översikt", "Cut score & tröskelvärden"])
 
 with tab_overview:
+    lo, hi = q.get_subscale(subscale_id).score_range if subscale_id else (0, 0)
+    threshold = st.slider("Välj tröskel", int(lo), int(hi), int(round(optimal.threshold)))
+    metrics = se.confusion_at_threshold(dataset, threshold, subscale_id)
+
     col_roc, col_cm = st.columns(2)
     with col_roc:
         header_cols = st.columns([5, 1])
@@ -68,16 +72,15 @@ with tab_overview:
                 "ROC-kurva & AUC",
                 "ROC-kurvan visar avvägningen mellan sensitivitet och (1 - specificitet) vid olika "
                 "trösklar. AUC (arean under kurvan) sammanfattar hur väl testet skiljer mellan "
-                "positiva och negativa fall - 0.5 är slumpnivå, 1.0 är perfekt särskiljning.",
+                "positiva och negativa fall - 0.5 är slumpnivå, 1.0 är perfekt särskiljning. Det röda "
+                "krysset visar var den valda tröskeln (i reglaget till höger) hamnar på kurvan.",
             )
-        roc_fig = ve.roc_curve_chart(roc.fpr, roc.tpr, roc.auc)
+        operating_point = (1 - metrics.specificity, metrics.sensitivity) if metrics is not None else None
+        roc_fig = ve.roc_curve_chart(roc.fpr, roc.tpr, roc.auc, operating_point=operating_point)
         st.plotly_chart(roc_fig, width="stretch")
 
     with col_cm:
         st.markdown("**Konfusionsmatris**")
-        lo, hi = q.get_subscale(subscale_id).score_range if subscale_id else (0, 0)
-        threshold = st.slider("Välj tröskel", int(lo), int(hi), int(round(optimal.threshold)))
-        metrics = se.confusion_at_threshold(dataset, threshold, subscale_id)
         if metrics is not None:
             st.plotly_chart(ve.confusion_matrix_heatmap(metrics.tp, metrics.fp, metrics.tn, metrics.fn), width="stretch")
 

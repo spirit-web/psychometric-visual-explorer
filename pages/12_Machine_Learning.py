@@ -33,7 +33,11 @@ if not se.has_outcome(dataset):
 
 st.info(
     "ℹ️ Målvariabeln är **simulerad** för demonstrationssyfte (se `data/generate_sample_data.py`). "
-    "Detta är ett pedagogiskt exempel, inte ett kliniskt beslutsstödsverktyg."
+    "Detta är ett pedagogiskt exempel, inte ett kliniskt beslutsstödsverktyg. **Värdet för en "
+    "psykolog:** se vilka svar som bäst förutsäger ett utfall (Feature Importance) och testa "
+    "själv hur en förändrad profil skulle predikteras (Snabbprediktion). **Värdet för en "
+    "forskare/student:** en fullständig ML-pipeline - dataförberedelse, unsupervised (PCA/kluster), "
+    "flera icke-linjära modeller inklusive ett neuralt nätverk, och en fullständig utvärdering."
 )
 
 ml_data = ml.prepare_ml_data(dataset)
@@ -240,37 +244,70 @@ with tab_importance:
 with tab_predict:
     st.markdown("**Snabbprediktion**")
     st.write(
-        "Välj en befintlig person ur datasetet för att se modellens prediktion jämfört med det "
-        "faktiska (simulerade) utfallet."
+        "Vilka svar driver en prediktion mest? Ändra en klients svar med reglagen nedan och se "
+        "hur den predikterade sannolikheten ändras direkt - eller välj en befintlig person ur "
+        "datasetet för att jämföra mot det faktiska (simulerade) utfallet."
     )
     predict_model_name = st.selectbox("Modell att använda", list(results.keys()), index=list(results.keys()).index(best_name), key="predict_model")
     predict_model = results[predict_model_name].model
 
-    person_ids = [pid for pid in se.person_ids(dataset) if ml.feature_vector_for_person(ml_data, dataset, pid) is not None]
-    if not person_ids:
-        st.info("Ingen person i datasetet har fullständig data för prediktion.")
+    predict_mode = st.radio(
+        "Läge",
+        ["Interaktiv (ändra svar med reglage)", "Befintlig person ur datasetet"],
+        horizontal=True,
+        key="predict_mode",
+    )
+
+    if predict_mode == "Befintlig person ur datasetet":
+        person_ids = [pid for pid in se.person_ids(dataset) if ml.feature_vector_for_person(ml_data, dataset, pid) is not None]
+        if not person_ids:
+            st.info("Ingen person i datasetet har fullständig data för prediktion.")
+        else:
+            person_id = st.selectbox("Välj person", person_ids, format_func=lambda pid: f"Person {pid}")
+            feature_vector = ml.feature_vector_for_person(ml_data, dataset, person_id)
+            actual = ml.actual_outcome_for_person(dataset, person_id)
+
+            proba = ml.predict_proba_for_vector(predict_model, feature_vector)
+            predicted_class = "Positiv" if proba >= 0.5 else "Negativ"
+            actual_class = {1: "Positiv", 0: "Negativ", None: "Okänd"}[actual]
+
+            col_input, col_result = st.columns([2, 1])
+            with col_input:
+                st.markdown("**Indata (första 10 features)**")
+                st.dataframe(feature_vector.head(10).to_frame(name="Värde"), width="stretch")
+            with col_result:
+                st.metric("Predikterad sannolikhet", f"{proba:.2f}")
+                st.metric("Predikterad klass", predicted_class)
+                st.metric("Faktiskt utfall (simulerat)", actual_class)
+                if actual is not None:
+                    if predicted_class == actual_class:
+                        st.success("✅ Modellen predikterade rätt klass för denna person.")
+                    else:
+                        st.warning("⚠️ Modellen predikterade fel klass för denna person.")
     else:
-        person_id = st.selectbox("Välj person", person_ids, format_func=lambda pid: f"Person {pid}")
-        feature_vector = ml.feature_vector_for_person(ml_data, dataset, person_id)
-        actual = ml.actual_outcome_for_person(dataset, person_id)
+        baseline = ml.baseline_feature_vector(ml_data)
+        feature_vector = baseline.copy()
+        scale = q.response_scale
+        item_ids = [item_id for item_id in q.item_ids if item_id in feature_vector.index]
 
-        proba = float(predict_model.predict_proba(feature_vector.to_frame().T)[:, 1][0])
+        col_sliders, col_result = st.columns([2, 1])
+        with col_sliders:
+            st.caption("Övriga features (t.ex. demografi) hålls på ett typiskt värde (medianen i datasetet).")
+            slider_cols = st.columns(2)
+            for i, item_id in enumerate(item_ids):
+                item = next((it for it in q.items if it.id == item_id), None)
+                label = f"{item_id} – {item.text}" if item else item_id
+                with slider_cols[i % 2]:
+                    feature_vector[item_id] = st.slider(
+                        label, int(scale.min), int(scale.max), int(round(baseline[item_id])), key=f"predict_slider_{item_id}"
+                    )
+
+        proba = ml.predict_proba_for_vector(predict_model, feature_vector)
         predicted_class = "Positiv" if proba >= 0.5 else "Negativ"
-        actual_class = {1: "Positiv", 0: "Negativ", None: "Okänd"}[actual]
-
-        col_input, col_result = st.columns([2, 1])
-        with col_input:
-            st.markdown("**Indata (första 10 features)**")
-            st.dataframe(feature_vector.head(10).to_frame(name="Värde"), width="stretch")
         with col_result:
             st.metric("Predikterad sannolikhet", f"{proba:.2f}")
             st.metric("Predikterad klass", predicted_class)
-            st.metric("Faktiskt utfall (simulerat)", actual_class)
-            if actual is not None:
-                if predicted_class == actual_class:
-                    st.success("✅ Modellen predikterade rätt klass för denna person.")
-                else:
-                    st.warning("⚠️ Modellen predikterade fel klass för denna person.")
+            st.caption("Baserat på ett typiskt profil förutom de items du justerat ovan - ett pedagogiskt exempel, inte en riktig klientbedömning.")
 
 st.write("")
 render_export_section(

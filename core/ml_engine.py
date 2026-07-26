@@ -392,3 +392,16 @@ def actual_outcome_for_person(dataset, person_id) -> int | None:
         return None
     val = dataset.raw.loc[idx, TARGET_COL]
     return int(val) if pd.notna(val) else None
+
+
+def baseline_feature_vector(ml_data: MLDataset) -> pd.Series:
+    """A 'typical' feature row (median of every column) - seeds the
+    interactive prediction sliders and fills in any feature the UI doesn't
+    expose a control for (e.g. one-hot demographic columns)."""
+    return ml_data.X.median(numeric_only=True)
+
+
+def predict_proba_for_vector(model, feature_vector: pd.Series) -> float:
+    """Predicted probability of the positive class for a single feature
+    row - used for the live 'what if this item answer changed' slider UI."""
+    return float(model.predict_proba(feature_vector.to_frame().T)[:, 1][0])

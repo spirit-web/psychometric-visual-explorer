@@ -6,6 +6,7 @@ import streamlit as st
 
 from components.kpi_card import kpi_card
 from core import plugin_engine as pe
+from core import stats_engine as se
 from utils.session import require_dataset
 
 dataset = require_dataset()
@@ -91,9 +92,59 @@ with kpi_cols[3]:
 
 st.write("")
 
-tab_info, tab_items, tab_subscales, tab_cutoffs, tab_save = st.tabs(
-    ["Grundinfo & svarsskala", "Items", "Delskalor", "Cut-offs", "Spara"]
+tab_shorten, tab_info, tab_items, tab_subscales, tab_cutoffs, tab_save = st.tabs(
+    ["Korta ner testet", "Grundinfo & svarsskala", "Items", "Delskalor", "Cut-offs", "Spara"]
 )
+
+with tab_shorten:
+    st.markdown("**Vilka frågor är säkrast att ta bort?**")
+    st.caption(
+        f"Baserat på verklig data för det aktiva testet ({q.test_name}) - visar vilka items som "
+        "bidrar minst till reliabiliteten och därför är säkrast att ta bort om du vill korta ner testet."
+    )
+    item_stats = se.item_level_table(dataset)
+    shorten_rows = [
+        {
+            "Item": i.item_id,
+            "Fråga": i.text,
+            "Item-total r": round(i.item_total_r, 2) if i.item_total_r is not None else None,
+            "Alpha om borttaget": round(i.alpha_if_deleted, 3) if i.alpha_if_deleted is not None else None,
+            "Tolkning": se.item_total_interpretation(i.item_total_r),
+        }
+        for i in item_stats
+    ]
+    shorten_df = pd.DataFrame(shorten_rows).sort_values("Item-total r", na_position="last")
+    st.dataframe(shorten_df, width="stretch", hide_index=True)
+
+    weak_items = [i.item_id for i in item_stats if i.item_total_r is not None and i.item_total_r < 0.30]
+    if weak_items:
+        st.warning(
+            f"⚠️ {len(weak_items)} item(er) har låg item-total-korrelation (<0.30) och bidrar minst "
+            f"till skalan: {', '.join(weak_items)}. Kandidater att ta bort om testet ska kortas ner."
+        )
+    else:
+        st.success("✅ Alla items har rimlig item-total-korrelation (≥0.30) - inget uppenbart att ta bort.")
+
+    to_remove = st.multiselect(
+        "Välj items att ta bort från utkastet",
+        [i.item_id for i in item_stats],
+        default=weak_items,
+        key="tb_shorten_selection",
+    )
+    if st.button("➖ Ta bort valda items från utkastet", disabled=not to_remove):
+        items_df = st.session_state["tb_items_df"]
+        st.session_state["tb_items_df"] = items_df[~items_df["id"].isin(to_remove)].reset_index(drop=True)
+
+        def _strip_removed_ids(item_ids_str: str) -> str:
+            remaining = [s.strip() for s in str(item_ids_str).split(",") if s.strip() and s.strip() not in to_remove]
+            return ", ".join(remaining)
+
+        subscales_df = st.session_state["tb_subscales_df"].copy()
+        subscales_df["item_ids"] = subscales_df["item_ids"].apply(_strip_removed_ids)
+        st.session_state["tb_subscales_df"] = subscales_df
+
+        st.success(f"Tog bort {len(to_remove)} item(er) från utkastet. Gå till fliken Spara för att spara som en ny, kortare testdefinition.")
+        st.rerun()
 
 with tab_info:
     col1, col2 = st.columns(2)

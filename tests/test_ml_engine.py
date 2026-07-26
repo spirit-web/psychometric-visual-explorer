@@ -149,3 +149,24 @@ def test_feature_vector_for_person_returns_none_for_unknown_id():
     dataset = _dataset(n=100)
     ml_data = ml.prepare_ml_data(dataset)
     assert ml.feature_vector_for_person(ml_data, dataset, 999999) is None
+
+
+def test_baseline_feature_vector_covers_all_columns_and_is_within_range():
+    dataset = _dataset(n=200)
+    ml_data = ml.prepare_ml_data(dataset)
+    baseline = ml.baseline_feature_vector(ml_data)
+    assert set(baseline.index) == set(ml_data.X.columns)
+    for col in ml_data.X.columns:
+        assert ml_data.X[col].min() <= baseline[col] <= ml_data.X[col].max()
+
+
+def test_predict_proba_for_vector_matches_manual_call():
+    dataset = _dataset(n=200)
+    ml_data = ml.prepare_ml_data(dataset)
+    result = ml.run_all_models(ml_data, model_names=["Logistic Regression"])
+    model = result["Logistic Regression"].model
+    baseline = ml.baseline_feature_vector(ml_data)
+    proba = ml.predict_proba_for_vector(model, baseline)
+    expected = float(model.predict_proba(baseline.to_frame().T)[:, 1][0])
+    assert proba == pytest.approx(expected)
+    assert 0.0 <= proba <= 1.0

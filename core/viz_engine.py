@@ -246,10 +246,23 @@ def ci_error_bar_chart(labels: list, centers: list[float], lowers: list[float], 
     return fig
 
 
-def roc_curve_chart(fpr, tpr, auc: float) -> go.Figure:
+def roc_curve_chart(fpr, tpr, auc: float, operating_point: tuple[float, float] | None = None) -> go.Figure:
+    """operating_point: (fpr, tpr) for a specific chosen threshold, e.g. the
+    one selected on Decision Support's confusion-matrix slider - shown as a
+    marker on the curve so moving the slider visibly moves the point."""
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=fpr, y=tpr, mode="lines", name=f"ROC (AUC = {auc:.2f})", line=dict(color=COLOR_PRIMARY, width=3)))
     fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode="lines", name="Slumpnivå", line=dict(color="#9AA4C7", dash="dash")))
+    if operating_point is not None:
+        fig.add_trace(
+            go.Scatter(
+                x=[operating_point[0]],
+                y=[operating_point[1]],
+                mode="markers",
+                name="Vald tröskel",
+                marker=dict(color=COLOR_BAD, size=12, symbol="x"),
+            )
+        )
     fig.update_layout(
         xaxis_title="1 - Specificitet (FPR)",
         yaxis_title="Sensitivitet (TPR)",
