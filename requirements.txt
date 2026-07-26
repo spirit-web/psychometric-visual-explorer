@@ -9,7 +9,8 @@ matplotlib
 
 scikit-learn
 xgboost
-shap
+shap==0.52.0
+numba>=0.60
 torch
 
 pingouin
