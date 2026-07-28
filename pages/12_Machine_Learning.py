@@ -67,13 +67,31 @@ def _with_question_text(series: pd.Series) -> pd.Series:
 # --- KPI row -------------------------------------------------
 kpi_cols = st.columns(4)
 with kpi_cols[0]:
-    kpi_card("🧠", "#EDE9FE", best_name, "Bästa modell", caption="Högst AUC")
+    kpi_card(
+        "🧠", "#EDE9FE", best_name, "Bästa modell", caption="Högst AUC",
+        tooltip="Vilken av de tränade modellerna (Logistic Regression, Random Forest, XGBoost, Neural "
+        "Network) som presterade bäst på testdatan, mätt med AUC. Se fliken Modeller & Utvärdering "
+        "för att jämföra alla modeller.",
+    )
 with kpi_cols[1]:
-    kpi_card("📈", "#D1FAE5", f"{best.roc_auc:.2f}", "Model Performance (AUC)")
+    kpi_card(
+        "📈", "#D1FAE5", f"{best.roc_auc:.2f}", "Model Performance (AUC)",
+        tooltip="Area Under the Curve för den bästa modellen - hur väl den skiljer mellan de med och "
+        "utan utfallet. 0.5 = slumpnivå, 1.0 = perfekt särskiljning.",
+    )
 with kpi_cols[2]:
-    kpi_card("✅", "#DBEAFE", f"{best.cv_auc_mean:.2f} ± {best.cv_auc_std:.2f}", "Cross-Validation (5-fold)", caption="Medel AUC ± SD")
+    kpi_card(
+        "✅", "#DBEAFE", f"{best.cv_auc_mean:.2f} ± {best.cv_auc_std:.2f}", "Cross-Validation (5-fold)", caption="Medel AUC ± SD",
+        tooltip="Modellen tränas och utvärderas om 5 gånger på olika delar av datan, för att ge en mer "
+        "pålitlig skattning av hur den presterar på ny, osedd data - inte bara ett enda test-set. "
+        "Liten SD betyder att prestandan är stabil mellan delarna.",
+    )
 with kpi_cols[3]:
-    kpi_card("🎯", "#FFEDD5", f"N={ml_data.n_samples}", "Prediktionsmål", caption="Binär klassificering")
+    kpi_card(
+        "🎯", "#FFEDD5", f"N={ml_data.n_samples}", "Prediktionsmål", caption="Binär klassificering",
+        tooltip="Antal observationer som användes för att träna och utvärdera modellerna, efter att "
+        "rader med saknad målvariabel tagits bort (se fliken Dataförberedelse).",
+    )
 
 st.write("")
 
@@ -126,7 +144,15 @@ with tab_overview:
     st.caption("Modellen är ett beslutsstöd och ersätter inte klinisk bedömning. EDA och deskriptiv statistik finns i Dataset Overview och Psychometric QC.")
 
 with tab_prep:
-    st.markdown("**Dataförberedelse**")
+    header_cols = st.columns([5, 1])
+    header_cols[0].markdown("**Dataförberedelse**")
+    with header_cols[1]:
+        concept_tooltip(
+            "Dataförberedelse",
+            "Innan en modell kan tränas måste rådatan städas: saknade svar fylls i (imputeras), "
+            "textkategorier (t.ex. kön, utbildning) omvandlas till siffror (one-hot-kodning), och rader "
+            "utan målvariabel tas bort eftersom modellen inte kan lära sig av dem.",
+        )
     report = ml_data.report
     info_cols = st.columns(4)
     info_cols[0].metric("Rader totalt", report.n_rows_total)
@@ -149,7 +175,15 @@ with tab_prep:
     st.caption("Fullständig utforskande dataanalys (EDA) finns i Dataset Overview och Psychometric QC.")
 
 with tab_unsup:
-    st.markdown("**Unsupervised learning: KMeans-klustring**")
+    header_cols = st.columns([5, 1])
+    header_cols[0].markdown("**Unsupervised learning: KMeans-klustring**")
+    with header_cols[1]:
+        concept_tooltip(
+            "Silhouette score",
+            "Mäter hur väl-separerade och sammanhållna klustren är, från -1 (dåligt) till +1 "
+            "(utmärkt). Värden nära 0 tyder på överlappande kluster utan tydlig struktur - prova ett "
+            "annat antal kluster med reglaget.",
+        )
     n_clusters = st.slider("Antal kluster", 2, 6, 3)
     clusters = ml.run_kmeans(ml_data, n_clusters=n_clusters)
 
@@ -190,7 +224,17 @@ with tab_unsup:
     )
 
 with tab_models:
-    st.markdown("**Modelljämförelse**")
+    header_cols = st.columns([5, 1])
+    header_cols[0].markdown("**Modelljämförelse**")
+    with header_cols[1]:
+        concept_tooltip(
+            "Utvärderingsmått",
+            "Accuracy: andel korrekta prediktioner totalt. Precision: av de förutspådda positiva, hur "
+            "många var rätt? Recall (sensitivitet): av de faktiskt positiva, hur många hittade "
+            "modellen? F1: balans mellan precision och recall. ROC-AUC: förmåga att skilja klasserna "
+            "över alla trösklar. CV AUC: samma mått men medelvärde över 5 korsvaliderings-omgångar, "
+            "för en mer pålitlig skattning.",
+        )
     comparison_df = pd.DataFrame(
         [
             {
@@ -218,10 +262,18 @@ with tab_models:
 
     col_cm, col_curves = st.columns(2)
     with col_cm:
-        st.markdown("**Confusion Matrix**")
+        header_cols = st.columns([5, 1])
+        header_cols[0].markdown("**Confusion Matrix**")
+        with header_cols[1]:
+            concept_tooltip(
+                "Confusion Matrix",
+                "En 2×2-tabell över hur modellens prediktioner (positiv/negativ) stämmer mot det "
+                "faktiska utfallet. Diagonalen är korrekta klassificeringar; övriga rutor är fel.",
+            )
         tn, fp, fn, tp = selected.confusion.ravel()
         st.plotly_chart(ve.confusion_matrix_heatmap(int(tp), int(fp), int(tn), int(fn)), width="stretch", key="ml_model_cm")
         st.markdown("**Classification Report**")
+        st.caption("Samma mått (precision, recall, F1) uppdelat per klass (Negativ/Positiv), i scikit-learns standardformat.")
         st.code(selected.classification_report)
 
     with col_curves:

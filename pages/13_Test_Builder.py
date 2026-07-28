@@ -4,6 +4,7 @@ core/plugin_engine.py."""
 import pandas as pd
 import streamlit as st
 
+from components.concept_tooltip import concept_tooltip
 from components.kpi_card import kpi_card
 from core import plugin_engine as pe
 from core import stats_engine as se
@@ -97,7 +98,15 @@ tab_shorten, tab_info, tab_items, tab_subscales, tab_cutoffs, tab_save = st.tabs
 )
 
 with tab_shorten:
-    st.markdown("**Vilka frågor är säkrast att ta bort?**")
+    header_cols = st.columns([5, 1])
+    header_cols[0].markdown("**Vilka frågor är säkrast att ta bort?**")
+    with header_cols[1]:
+        concept_tooltip(
+            "Item-total r",
+            "Korrelationen mellan en frågas poäng och summan av övriga frågor. Låga värden (<0.30) "
+            "betyder att frågan mäter något annat än resten av skalan och kan tas bort utan att "
+            "reliabiliteten försämras nämnvärt - se även Reliability Explorer för samma analys.",
+        )
     st.caption(
         f"Baserat på verklig data för det aktiva testet ({q.test_name}) - visar vilka frågor som "
         "bidrar minst till reliabiliteten och därför är säkrast att ta bort om du vill korta ner testet."

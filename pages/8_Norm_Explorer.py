@@ -29,11 +29,23 @@ me = se.measurement_error(dataset, subscale_id)
 # --- KPI row -------------------------------------------------
 kpi_cols = st.columns(4)
 with kpi_cols[0]:
-    kpi_card("👥", "#DBEAFE", "Denna datamängd", "Normgrupp", caption="Sample-baserad")
+    kpi_card(
+        "👥", "#DBEAFE", "Denna datamängd", "Normgrupp", caption="Sample-baserad",
+        tooltip="Vilken grupp klientens resultat jämförs mot. Här används det aktiva datasetet självt "
+        "som normgrupp, inte en extern standardiserad population - se info-rutan nedan.",
+    )
 with kpi_cols[1]:
-    kpi_card("🧮", "#D1FAE5", str(stats.n), "Antal i normgrupp", caption="Personer")
+    kpi_card(
+        "🧮", "#D1FAE5", str(stats.n), "Antal i normgrupp", caption="Personer",
+        tooltip="Hur många personer normgruppens medelvärde och standardavvikelse är beräknade från. "
+        "Fler personer ger en säkrare skattning av normen.",
+    )
 with kpi_cols[2]:
-    kpi_card("📐", "#EDE9FE", "Percentil", "Normtyp")
+    kpi_card(
+        "📐", "#EDE9FE", "Percentil", "Normtyp",
+        tooltip="Typen av normerad poäng som visas nedan - percentil anger andelen i normgruppen med "
+        "lägre poäng. Samma resultat visas även som T-poäng och Z-poäng.",
+    )
 with kpi_cols[3]:
     kpi_card("🧩", "#FFEDD5", str(dataset.n_subscales), "Delskalor")
 

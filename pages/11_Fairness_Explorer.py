@@ -40,13 +40,30 @@ if not results:
 # --- KPI row -------------------------------------------------
 kpi_cols = st.columns(4)
 with kpi_cols[0]:
-    kpi_card("👥", "#DBEAFE", str(summary.n_dimensions), "Grupper analyserade", caption=", ".join(sorted({r.dimension for r in results})))
+    kpi_card(
+        "👥", "#DBEAFE", str(summary.n_dimensions), "Grupper analyserade", caption=", ".join(sorted({r.dimension for r in results})),
+        tooltip="Antal demografiska dimensioner (t.ex. kön, ålder, utbildning) som jämförs. Se "
+        "tabellen i Översikt-fliken för varje enskild gruppjämförelse.",
+    )
 with kpi_cols[1]:
-    kpi_card("⚖️", "#D1FAE5", f"{summary.mean_fairness_index:.2f}" if summary.mean_fairness_index is not None else "–", "Rättviseindex (genomsnitt)")
+    kpi_card(
+        "⚖️", "#D1FAE5", f"{summary.mean_fairness_index:.2f}" if summary.mean_fairness_index is not None else "–", "Rättviseindex (genomsnitt)",
+        tooltip="Genomsnittligt rättviseindex över alla gruppjämförelser - närmare 1.0 är bättre. "
+        "Se förklaringen vid tabellen i Översikt-fliken för hur indexet räknas ut.",
+    )
 with kpi_cols[2]:
-    kpi_card("↔️", "#EDE9FE", f"{summary.max_abs_d:.2f}" if summary.max_abs_d is not None else "–", "Största skillnad", caption=summary.max_d_label)
+    kpi_card(
+        "↔️", "#EDE9FE", f"{summary.max_abs_d:.2f}" if summary.max_abs_d is not None else "–", "Största skillnad", caption=summary.max_d_label,
+        tooltip="Den enskilt största skillnaden (Cohen's d) mellan någon jämförelsegrupp och dess "
+        "referensgrupp - det är denna skillnad som avgör om testet flaggas för potentiell bias nedan.",
+    )
 with kpi_cols[3]:
-    kpi_card(status_icon(BIAS_STATUS[summary.bias_level]), "#FFEDD5", BIAS_LABELS[summary.bias_level], "Systematisk bias")
+    kpi_card(
+        status_icon(BIAS_STATUS[summary.bias_level]), "#FFEDD5", BIAS_LABELS[summary.bias_level], "Systematisk bias",
+        tooltip="Sammanfattande bedömning baserat på den största skillnaden: Låg (|d| < 0.2), Måttlig "
+        "(0.2-0.5), Hög (> 0.5). Detta är ett observerat mönster att undersöka vidare, inte i sig ett "
+        "bevis för orättvis bias.",
+    )
 
 st.write("")
 
@@ -109,10 +126,18 @@ with tab_overview:
     st.dataframe(fairness_detail_df, width="stretch", hide_index=True)
 
 with tab_client:
-    st.caption(
+    header_cols = st.columns([5, 1])
+    header_cols[0].caption(
         "Placera en enskild klients resultat mot varje grupps medelvärde - oavsett vilken grupp "
         "klienten själv tillhör, ser du om resultatet ser typiskt ut jämfört med alla grupper."
     )
+    with header_cols[1]:
+        concept_tooltip(
+            "Klient vs. grupper",
+            "Visar en enskild klients poäng som en vertikal linje mot varje grupps medelvärde. Om "
+            "linjen ligger nära alla gruppers medelvärden, oavsett vilken grupp klienten faktiskt "
+            "tillhör, är resultatet svårt att förklara med systematisk bias mellan grupperna.",
+        )
     client_score = select_or_enter_client(dataset, subscale_id, key_prefix="fairness")
 
     if client_score is None:

@@ -46,13 +46,32 @@ if roc is None or optimal is None:
 kpi_cols = st.columns(4)
 with kpi_cols[0]:
     ci_text = f"{roc.auc_ci[0]:.2f} – {roc.auc_ci[1]:.2f}" if roc.auc_ci else None
-    kpi_card("📈", "#DBEAFE", f"{roc.auc:.2f}", "AUC", caption=f"95% KI: {ci_text}" if ci_text else None)
+    kpi_card(
+        "📈", "#DBEAFE", f"{roc.auc:.2f}", "AUC", caption=f"95% KI: {ci_text}" if ci_text else None,
+        tooltip="Area Under the Curve - sammanfattar testets förmåga att skilja mellan de med och utan "
+        "utfallet, över alla möjliga trösklar samtidigt. 0.5 = slumpnivå, 1.0 = perfekt särskiljning. "
+        "≥0.80 anses bra, ≥0.70 acceptabelt.",
+    )
 with kpi_cols[1]:
-    kpi_card("🎯", "#D1FAE5", f"{optimal.threshold:g}", "Rekommenderad tröskel", caption=f"Youden's J = {optimal.youdens_j:.2f}")
+    kpi_card(
+        "🎯", "#D1FAE5", f"{optimal.threshold:g}", "Rekommenderad tröskel", caption=f"Youden's J = {optimal.youdens_j:.2f}",
+        tooltip="Den cut-off-poäng som maximerar Youden's J (bästa balans mellan sensitivitet och "
+        "specificitet) för just detta test och denna data - inte nödvändigtvis samma tröskel som "
+        "testets officiella cut-off.",
+    )
 with kpi_cols[2]:
-    kpi_card("✅", "#EDE9FE", f"{optimal.sensitivity:.2f}", "Sensitivitet vid tröskel")
+    kpi_card(
+        "✅", "#EDE9FE", f"{optimal.sensitivity:.2f}", "Sensitivitet vid tröskel",
+        tooltip="Andel med utfallet (t.ex. diagnos) som testet korrekt identifierar som positiva vid "
+        "denna tröskel. Hög sensitivitet minskar risken att missa någon som behöver hjälp "
+        "(färre false negatives).",
+    )
 with kpi_cols[3]:
-    kpi_card("🛡️", "#FFEDD5", f"{optimal.specificity:.2f}", "Specificitet vid tröskel")
+    kpi_card(
+        "🛡️", "#FFEDD5", f"{optimal.specificity:.2f}", "Specificitet vid tröskel",
+        tooltip="Andel utan utfallet som testet korrekt identifierar som negativa vid denna tröskel. "
+        "Hög specificitet minskar risken för onödig oro eller åtgärd hos friska (färre false positives).",
+    )
 
 st.write("")
 
@@ -80,13 +99,30 @@ with tab_overview:
         st.plotly_chart(roc_fig, width="stretch")
 
     with col_cm:
-        st.markdown("**Konfusionsmatris**")
+        header_cols = st.columns([5, 1])
+        header_cols[0].markdown("**Konfusionsmatris**")
+        with header_cols[1]:
+            concept_tooltip(
+                "Konfusionsmatris",
+                "En 2×2-tabell över hur testets prediktioner (positiv/negativ vid vald tröskel) stämmer "
+                "mot det faktiska utfallet. Diagonalen (TP, TN) är korrekta klassificeringar; övriga "
+                "rutor (FP, FN) är fel av olika slag.",
+            )
         if metrics is not None:
             st.plotly_chart(ve.confusion_matrix_heatmap(metrics.tp, metrics.fp, metrics.tn, metrics.fn), width="stretch")
 
     if metrics is not None:
         st.write("")
-        st.markdown("**Prestandamått vid vald tröskel**")
+        header_cols = st.columns([5, 1])
+        header_cols[0].markdown("**Prestandamått vid vald tröskel**")
+        with header_cols[1]:
+            concept_tooltip(
+                "PPV & NPV",
+                "PPV (Precision): av alla som testet flaggar som positiva, hur många har verkligen "
+                "utfallet? NPV: av alla som flaggas som negativa, hur många är verkligen utan utfallet? "
+                "Till skillnad från sensitivitet/specificitet beror PPV/NPV på hur vanligt utfallet är "
+                "i populationen (prevalens) - samma test kan ge olika PPV/NPV i olika grupper.",
+            )
         metric_cols = st.columns(4)
         metric_cols[0].metric("Sensitivitet (TPR)", f"{metrics.sensitivity:.2f}")
         metric_cols[1].metric("Specificitet (TNR)", f"{metrics.specificity:.2f}")
