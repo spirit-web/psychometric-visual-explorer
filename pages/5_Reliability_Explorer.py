@@ -32,6 +32,7 @@ with kpi_cols[0]:
             "Mäter intern konsistens - hur väl frågorna i skalan samvarierar. Tumregel: ≥0.90 "
             "utmärkt, ≥0.80 bra, ≥0.70 acceptabelt, <0.70 bör granskas."
         ),
+        learning_key="Intern konsistens (Cronbach's alpha)",
     )
 with kpi_cols[1]:
     kpi_card(
@@ -48,6 +49,7 @@ with kpi_cols[3]:
     kpi_card(
         "📊", "#FFEDD5", ci_text, "95% KI (alpha)", caption="Konfidensintervall",
         tooltip="Intervallet där det sanna alpha-värdet troligen ligger, baserat på antal frågor och urvalsstorlek. Ett smalt intervall betyder en mer precis skattning.",
+        learning_key="Konfidensintervall (KI) för en poäng",
     )
 
 st.write("")
@@ -76,6 +78,7 @@ with tab_overview:
                 "Item-total korrelation",
                 "Korrelationen mellan ett items poäng och summan av övriga items. Låga värden "
                 "(<0.30) tyder på att itemet mäter något annat än resten av skalan.",
+                learning_key="Item-total korrelation",
             )
         r_series = item_df["item_total_r"].dropna()
         item_total_fig = None
@@ -93,6 +96,7 @@ with tab_overview:
                 "Alpha om item tas bort",
                 "Vad Cronbach's alpha skulle bli om detta item togs bort ur skalan. Ett värde "
                 "högre än nuvarande alpha betyder att itemet försämrar reliabiliteten.",
+                learning_key="Intern konsistens (Cronbach's alpha)",
             )
         rows = [{"Aktuellt": "Alla frågor", "Alpha": round(overall.alpha, 3) if overall.alpha else "–"}]
         for item_id, row in item_df.iterrows():
@@ -136,6 +140,7 @@ with tab_scale:
             "Cronbach's alpha vs McDonald's omega",
             "Alpha antar att alla frågor väger lika mycket; omega bygger på en faktormodell och "
             "är ofta ett mer robust mått, särskilt när frågorna varierar i hur starkt de laddar på konstruktet.",
+            learning_key="McDonald's omega",
         )
     rows = []
     for snapshot in se.reliability_snapshot_all_subscales(dataset):

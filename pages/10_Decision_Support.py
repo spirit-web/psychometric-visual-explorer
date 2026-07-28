@@ -51,6 +51,7 @@ with kpi_cols[0]:
         tooltip="Area Under the Curve - sammanfattar testets förmåga att skilja mellan de med och utan "
         "utfallet, över alla möjliga trösklar samtidigt. 0.5 = slumpnivå, 1.0 = perfekt särskiljning. "
         "≥0.80 anses bra, ≥0.70 acceptabelt.",
+        learning_key="ROC-kurva & AUC",
     )
 with kpi_cols[1]:
     kpi_card(
@@ -58,6 +59,7 @@ with kpi_cols[1]:
         tooltip="Den cut-off-poäng som maximerar Youden's J (bästa balans mellan sensitivitet och "
         "specificitet) för just detta test och denna data - inte nödvändigtvis samma tröskel som "
         "testets officiella cut-off.",
+        learning_key="Cut score",
     )
 with kpi_cols[2]:
     kpi_card(
@@ -65,12 +67,14 @@ with kpi_cols[2]:
         tooltip="Andel med utfallet (t.ex. diagnos) som testet korrekt identifierar som positiva vid "
         "denna tröskel. Hög sensitivitet minskar risken att missa någon som behöver hjälp "
         "(färre false negatives).",
+        learning_key="Sensitivitet (TPR)",
     )
 with kpi_cols[3]:
     kpi_card(
         "🛡️", "#FFEDD5", f"{optimal.specificity:.2f}", "Specificitet vid tröskel",
         tooltip="Andel utan utfallet som testet korrekt identifierar som negativa vid denna tröskel. "
         "Hög specificitet minskar risken för onödig oro eller åtgärd hos friska (färre false positives).",
+        learning_key="Specificitet (TNR)",
     )
 
 st.write("")
@@ -93,6 +97,7 @@ with tab_overview:
                 "trösklar. AUC (arean under kurvan) sammanfattar hur väl testet skiljer mellan "
                 "positiva och negativa fall - 0.5 är slumpnivå, 1.0 är perfekt särskiljning. Det röda "
                 "krysset visar var den valda tröskeln (i reglaget till höger) hamnar på kurvan.",
+                learning_key="ROC-kurva & AUC",
             )
         operating_point = (1 - metrics.specificity, metrics.sensitivity) if metrics is not None else None
         roc_fig = ve.roc_curve_chart(roc.fpr, roc.tpr, roc.auc, operating_point=operating_point)
@@ -107,6 +112,7 @@ with tab_overview:
                 "En 2×2-tabell över hur testets prediktioner (positiv/negativ vid vald tröskel) stämmer "
                 "mot det faktiska utfallet. Diagonalen (TP, TN) är korrekta klassificeringar; övriga "
                 "rutor (FP, FN) är fel av olika slag.",
+                learning_key="Konfusionsmatris",
             )
         if metrics is not None:
             st.plotly_chart(ve.confusion_matrix_heatmap(metrics.tp, metrics.fp, metrics.tn, metrics.fn), width="stretch")
@@ -122,6 +128,7 @@ with tab_overview:
                 "utfallet? NPV: av alla som flaggas som negativa, hur många är verkligen utan utfallet? "
                 "Till skillnad från sensitivitet/specificitet beror PPV/NPV på hur vanligt utfallet är "
                 "i populationen (prevalens) - samma test kan ge olika PPV/NPV i olika grupper.",
+                learning_key="PPV / NPV",
             )
         metric_cols = st.columns(4)
         metric_cols[0].metric("Sensitivitet (TPR)", f"{metrics.sensitivity:.2f}")
@@ -140,6 +147,7 @@ with tab_cutoffs:
             "Youden's J",
             "J = Sensitivitet + Specificitet - 1. Tröskeln som maximerar J ger den bästa balansen "
             "mellan att korrekt identifiera positiva och negativa fall.",
+            learning_key="Youden's J",
         )
     cutoff_df = se.cutoff_table(dataset, subscale_id)
     if not cutoff_df.empty:

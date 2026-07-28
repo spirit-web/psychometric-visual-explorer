@@ -21,9 +21,10 @@ plain language alongside the number. It was built as:
   supervised model, a deep-learning option, cross-validation, and a full
   evaluation suite with SHAP-based feature importance) against a real
   psychometric dataset.
-- **A psychometrics study aid** — the Learning Mode module mirrors every
-  analysis page with a short, plain-language explanation of the underlying
-  concept, formula, and worked example.
+- **A psychometrics study aid** — a Läroläge (Learning Mode) toggle in the
+  sidebar reveals a deeper, plain-language explanation of the underlying
+  concept, formula, and worked example on any ⓘ info icon, right where the
+  statistic is shown.
 - **A portfolio piece** demonstrating a clean separation between statistical
   logic, visualization, and UI in a non-trivial Streamlit application.
 - **A genuinely usable tool** for exploring the reliability, structure, and
@@ -39,10 +40,9 @@ in-app **Test Builder**.
 
 | Module | What it does |
 |---|---|
-| **Import Wizard** | 5-step flow: upload → identify → review → map items → finish. Auto-detects a known test from column names or falls back to manual mapping. |
-| **Dataset Overview** | N, response distributions, missingness, demographics, descriptive statistics, a reliability snapshot. |
+| **Import Wizard** | 2-step flow: upload → review. Auto-detects a known test from column names or falls back to manual mapping. |
+| **Dataset Overview** | N, response distributions, missingness, demographics, descriptive statistics, a reliability snapshot, and a test-profile section (item/subscale structure, item correlation heatmap). |
 | **Psychometric QC** | Automated checks: floor/ceiling effects, low-variance/constant items, outliers, duplicates, straight-lining patterns, an overall quality score. |
-| **Test Profile Explorer** | Item- and subscale-level structure, response distributions, item correlation heatmap. |
 | **Reliability Explorer** | Cronbach's alpha, McDonald's omega, item-total correlations, alpha-if-item-deleted, split-half, test-retest. |
 | **Factor Explorer** | Exploratory factor analysis: scree plot + parallel analysis, loadings, communalities, model fit (RMSEA/CFI/TLI/SRMR), factor correlations. |
 | **Validity Dashboard** | The five AERA/APA/NCME evidence sources — content, response processes, internal structure, relations to other variables, consequences. |
@@ -52,7 +52,6 @@ in-app **Test Builder**.
 | **Fairness Explorer** | Group comparisons (age/gender/education/group) via Cohen's d, a fairness index, DIF/measurement-invariance framing. |
 | **Machine Learning Explorer** | KMeans + PCA, Random Forest / XGBoost / a small PyTorch MLP, cross-validation, full evaluation suite, SHAP feature importance, a single-respondent prediction tool. |
 | **Test Builder** | View, edit, duplicate, or build from scratch a test definition (items, scales, response options, cut-offs) and save it as a new plugin. |
-| **Learning Mode** | Eight modules covering the psychometrics concept map, with progress tracking, formulas, and worked examples. |
 | **Export** | PDF reports (complete analysis, psychometric summary, decision support), PNG figure bundles, and anonymized CSV data export — as individual files or a combined ZIP. |
 
 ## Technology stack
@@ -120,7 +119,7 @@ psychometric-visual-explorer/
 ├── pages/                 # One Streamlit page per module (rendering only)
 ├── plugins/                # JSON test definitions (no executable code)
 ├── components/             # Shared UI widgets (KPI cards, tooltips, export)
-├── utils/                   # Session helpers, theming, Learning Mode content
+├── utils/                   # Session helpers, theming, Läroläge deep-dive content
 ├── data/sample_datasets/    # Generated synthetic CSVs (committed)
 ├── tests/                   # pytest — one file per core/ engine
 └── docs/                    # Build plan, mockups, reference material

@@ -24,7 +24,6 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "Fairness Explorer": {"sv": "Fairness Explorer", "en": "Fairness Explorer"},
     "Machine Learning": {"sv": "Machine Learning", "en": "Machine Learning"},
     "Test Builder": {"sv": "Test Builder", "en": "Test Builder"},
-    "Learning Mode": {"sv": "Learning Mode", "en": "Learning Mode"},
     "Export": {"sv": "Export", "en": "Export"},
 }
 

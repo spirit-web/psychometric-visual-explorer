@@ -106,6 +106,7 @@ with tab_shorten:
             "Korrelationen mellan en frågas poäng och summan av övriga frågor. Låga värden (<0.30) "
             "betyder att frågan mäter något annat än resten av skalan och kan tas bort utan att "
             "reliabiliteten försämras nämnvärt - se även Reliability Explorer för samma analys.",
+            learning_key="Item-total korrelation",
         )
     st.caption(
         f"Baserat på verklig data för det aktiva testet ({q.test_name}) - visar vilka frågor som "
@@ -294,5 +295,5 @@ with col_back:
     if st.button("Tillbaka", width="stretch"):
         st.switch_page("pages/12_Machine_Learning.py")
 with col_next:
-    if st.button("Fortsätt till Learning Mode →", type="primary", width="stretch"):
-        st.switch_page("pages/14_Learning_Mode.py")
+    if st.button("Fortsätt till Export →", type="primary", width="stretch"):
+        st.switch_page("pages/15_Export.py")

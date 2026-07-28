@@ -50,12 +50,14 @@ with kpi_cols[1]:
         "⚖️", "#D1FAE5", f"{summary.mean_fairness_index:.2f}" if summary.mean_fairness_index is not None else "–", "Rättviseindex (genomsnitt)",
         tooltip="Genomsnittligt rättviseindex över alla gruppjämförelser - närmare 1.0 är bättre. "
         "Se förklaringen vid tabellen i Översikt-fliken för hur indexet räknas ut.",
+        learning_key="Rättviseindex",
     )
 with kpi_cols[2]:
     kpi_card(
         "↔️", "#EDE9FE", f"{summary.max_abs_d:.2f}" if summary.max_abs_d is not None else "–", "Största skillnad", caption=summary.max_d_label,
         tooltip="Den enskilt största skillnaden (Cohen's d) mellan någon jämförelsegrupp och dess "
         "referensgrupp - det är denna skillnad som avgör om testet flaggas för potentiell bias nedan.",
+        learning_key="Cohen's d",
     )
 with kpi_cols[3]:
     kpi_card(
@@ -80,6 +82,7 @@ with tab_overview:
                 "Rättviseindex nära 1.0 indikerar hög rättvisa mellan grupper (ingen meningsfull "
                 "skillnad i medelpoäng). Värden under 0.75 (motsvarande |d| ≥ 0.5) kan indikera "
                 "potentiell orättvisa värd att undersöka vidare.",
+                learning_key="Rättviseindex",
             )
         rows = [
             {

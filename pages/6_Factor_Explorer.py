@@ -46,6 +46,7 @@ with kpi_cols[0]:
     kpi_card(
         "🧩", "#DBEAFE", str(pa.suggested_n_factors), "Föreslagna faktorer", caption="Parallel analysis",
         tooltip="Det statistiskt motiverade antalet faktorer att behålla, baserat på jämförelse med slumpdata av samma storlek. Använd detta som riktmärke för värdet ovan.",
+        learning_key="Parallel analysis",
     )
 with kpi_cols[1]:
     explained = f"{efa.variance_explained['Cumulative Var'].iloc[-1] * 100:.0f}%" if efa is not None else "–"
@@ -58,6 +59,7 @@ with kpi_cols[2]:
     kpi_card(
         "✅", "#EDE9FE", kmo_text, "KMO", caption="Sampling adequacy",
         tooltip="Kaiser-Meyer-Olkin-måttet: om datan lämpar sig för faktoranalys överhuvudtaget. ≥0.80 bra, ≥0.60 acceptabelt, under det bör faktoranalys tolkas med försiktighet.",
+        learning_key="KMO & Bartlett's test",
     )
 with kpi_cols[3]:
     bartlett_text = "< .001" if adequacy.bartlett_p is not None and adequacy.bartlett_p < 0.001 else (
@@ -66,6 +68,7 @@ with kpi_cols[3]:
     kpi_card(
         "🔬", "#FFEDD5", bartlett_text, "Bartlett's test (p)", caption="Signifikant om < .05",
         tooltip="Testar om frågorna korrelerar tillräckligt med varandra för att faktoranalys ska vara meningsfull. Ett lågt p-värde (< .05) är det önskade utfallet här.",
+        learning_key="KMO & Bartlett's test",
     )
 
 st.write("")
@@ -83,6 +86,7 @@ with tab_overview:
                 "Jämför egenvärden från dina data med egenvärden från slumpmässiga data av samma "
                 "storlek. Behåll faktorer vars egenvärde överstiger slumpdatans - ett mer robust "
                 "kriterium än Kaisers regel (egenvärde > 1).",
+                learning_key="Parallel analysis",
             )
         if efa is not None:
             rotation_text = "Ingen (1 faktor)" if efa.n_factors == 1 else "Promax (oblik)"
@@ -149,6 +153,7 @@ with tab_overview:
                 "Scree plot",
                 "Visar egenvärdena i fallande ordning. Antalet faktorer att behålla är där kurvan "
                 "planar ut (\"armbågen\"), eller där den ligger över parallel analysis-linjen.",
+                learning_key="Scree plot",
             )
         scree_fig = None
         if len(pa.eigenvalues):
@@ -189,6 +194,7 @@ with tab_loadings:
             "Kommunalitet",
             "Andelen varians i en fråga som förklaras av de extraherade faktorerna tillsammans. "
             "Låg kommunalitet (<0.30) betyder att frågan till stor del mäter något faktorerna inte fångar.",
+            learning_key="Kommunalitet",
         )
     if efa is not None:
         table = efa.loadings.copy()

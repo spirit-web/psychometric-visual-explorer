@@ -36,6 +36,7 @@ with kpi_cols[0]:
             "Hur mycket en persons poäng kan variera av ren slump om de tog samma test igen utan att "
             "ha förändrats. Ju lägre SEM, desto mer kan du lita på en enskild mätning."
         ),
+        learning_key="SEM (Standard Error of Measurement)",
     )
 with kpi_cols[1]:
     kpi_card(
@@ -45,11 +46,13 @@ with kpi_cols[1]:
             "verklig förändring - inte bara mätbrus. Central när du följer en klient över flera "
             "sessioner: en mindre förändring än detta bör inte tolkas som förbättring eller försämring."
         ),
+        learning_key="Reliable Change Index (RCI)",
     )
 with kpi_cols[2]:
     kpi_card(
         "📈", "#EDE9FE", f"{me.alpha:.2f}" if me.alpha is not None else "–", "Reliabilitet (alpha)",
         tooltip="Samma Cronbach's alpha som i Reliability Explorer - visas här eftersom SEM räknas direkt utifrån den.",
+        learning_key="Intern konsistens (Cronbach's alpha)",
     )
 with kpi_cols[3]:
     kpi_card(
@@ -82,6 +85,7 @@ with tab_overview:
                 "Sant poäng-intervall",
                 "Kurvan visar den uppskattade fördelningen av den sanna poängen T runt en "
                 "observerad poäng X, med SEM som spridningsmått. Det skuggade området är 95% KI.",
+                learning_key="Konfidensintervall (KI) för en poäng",
             )
         ids = se.person_ids(dataset)
         person_id = st.selectbox("Välj person", ids, format_func=lambda pid: f"Person {pid}", key="me_person")
@@ -106,6 +110,7 @@ with tab_ci:
             "Konfidensintervall",
             "Felintervall hjälper dig att tolka om förändringar i resultat är verkliga eller kan "
             "bero på mätosäkerhet.",
+            learning_key="Konfidensintervall (KI) för en poäng",
         )
     ci_table = se.all_person_confidence_intervals(dataset, subscale_id)
     ci_fig = None
@@ -129,6 +134,7 @@ with tab_change:
             "RCI = (poäng vid tid 2 − poäng vid tid 1) / SE_diff, där SE_diff = SEM × √2. "
             "|RCI| ≥ 1.96 tolkas som en statistiskt pålitlig förändring (Jacobson & Truax, 1991), "
             "inte bara mätbrus.",
+            learning_key="Reliable Change Index (RCI)",
         )
     rci_results = se.reliable_change_index(dataset, subscale_id)
     if rci_results:

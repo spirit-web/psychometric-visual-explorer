@@ -63,12 +63,13 @@ def home() -> None:
                 "target": "pages/1_Import_Wizard.py",
             },
             {
+                "id": "laroläge",
                 "icon": "\U0001F393",
                 "icon_bg": "#EDE9FE",
-                "title": "Learning Mode",
-                "desc": "Lär dig psykometri med interaktiva förklaringar och exempel.",
-                "button": "Starta",
-                "target": "pages/14_Learning_Mode.py",
+                "title": "Läroläge",
+                "desc": "Slå på Läroläge i sidofältet för fördjupade pedagogiska förklaringar direkt på varje sida.",
+                "button": "Så funkar det",
+                "target": None,
             },
             {
                 "icon": "\U0001F4D6",
@@ -99,12 +100,13 @@ def home() -> None:
                 "target": "pages/1_Import_Wizard.py",
             },
             {
+                "id": "laroläge",
                 "icon": "\U0001F393",
                 "icon_bg": "#EDE9FE",
                 "title": "Learning Mode",
-                "desc": "Learn psychometrics with interactive explanations and examples.",
-                "button": "Start",
-                "target": "pages/14_Learning_Mode.py",
+                "desc": "Turn on Läroläge in the sidebar for deeper pedagogical explanations right on every page.",
+                "button": "How it works",
+                "target": None,
             },
             {
                 "icon": "\U0001F4D6",
@@ -142,6 +144,20 @@ def home() -> None:
                     if card.get("id") == "sample_data":
                         st.session_state["pve_use_example"] = True
                     st.switch_page(card["target"])
+            elif card.get("id") == "laroläge":
+                with st.popover(card["button"], width="stretch"):
+                    if lang == "sv":
+                        st.write(
+                            "Läroläge finns som en 🎓-brytare längst ner i sidofältet. När den är "
+                            "på visar varje ⓘ-inforuta i appen en extra, djupare förklaring - bra "
+                            "för tentaplugg eller för att förstå ett begrepp du är osäker på."
+                        )
+                    else:
+                        st.write(
+                            "Learning Mode is a 🎓 toggle at the bottom of the sidebar. When it's "
+                            "on, every ⓘ info box in the app shows an extra, deeper explanation - "
+                            "useful for exam prep or when you're unsure about a concept."
+                        )
             else:
                 with st.popover(card["button"], width="stretch"):
                     st.write(
@@ -164,7 +180,6 @@ PAGES = [
     st.Page("pages/7_Validity_Dashboard.py", title=t("Validity Dashboard"), icon=":material/track_changes:"),
     st.Page("pages/12_Machine_Learning.py", title=t("Machine Learning"), icon=":material/model_training:"),
     st.Page("pages/13_Test_Builder.py", title=t("Test Builder"), icon=":material/build:"),
-    st.Page("pages/14_Learning_Mode.py", title=t("Learning Mode"), icon=":material/school:"),
     st.Page("pages/15_Export.py", title=t("Export"), icon=":material/ios_share:"),
 ]
 

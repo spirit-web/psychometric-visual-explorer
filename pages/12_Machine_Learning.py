@@ -78,6 +78,7 @@ with kpi_cols[1]:
         "📈", "#D1FAE5", f"{best.roc_auc:.2f}", "Model Performance (AUC)",
         tooltip="Area Under the Curve för den bästa modellen - hur väl den skiljer mellan de med och "
         "utan utfallet. 0.5 = slumpnivå, 1.0 = perfekt särskiljning.",
+        learning_key="ROC-kurva & AUC",
     )
 with kpi_cols[2]:
     kpi_card(
@@ -269,6 +270,7 @@ with tab_models:
                 "Confusion Matrix",
                 "En 2×2-tabell över hur modellens prediktioner (positiv/negativ) stämmer mot det "
                 "faktiska utfallet. Diagonalen är korrekta klassificeringar; övriga rutor är fel.",
+                learning_key="Konfusionsmatris",
             )
         tn, fp, fn, tp = selected.confusion.ravel()
         st.plotly_chart(ve.confusion_matrix_heatmap(int(tp), int(fp), int(tn), int(fn)), width="stretch", key="ml_model_cm")

@@ -88,6 +88,31 @@ LEARNING_MODULES: list[LearningModule] = [
                 "Bekräftande faktoranalys - testar om en i förväg specificerad faktorstruktur "
                 "stämmer med observerad data. Används för att bekräfta EFA-resultat på nya data.",
             ),
+            ConceptItem(
+                "Parallel analysis",
+                "Jämför egenvärden från de riktiga data med egenvärden från slumpmässiga data av "
+                "samma storlek. Behåll faktorer vars egenvärde överstiger slumpdatans - ett mer "
+                "robust kriterium för antal faktorer än Kaisers regel (egenvärde > 1).",
+            ),
+            ConceptItem(
+                "Scree plot",
+                "Visar egenvärdena i fallande ordning som en linjediagram. Antalet faktorer att "
+                "behålla är ofta där kurvan planar ut (\"armbågen\"), eller där den korsar en "
+                "parallel analysis-linje.",
+            ),
+            ConceptItem(
+                "Kommunalitet",
+                "Andelen varians i en fråga som förklaras av de extraherade faktorerna tillsammans. "
+                "Låg kommunalitet (<0.30) betyder att frågan till stor del mäter något faktorerna "
+                "inte fångar upp.",
+            ),
+            ConceptItem(
+                "KMO & Bartlett's test",
+                "Två kontroller av om data överhuvudtaget lämpar sig för faktoranalys, innan man "
+                "tolkar resultatet. KMO (Kaiser-Meyer-Olkin) mäter sampling adequacy (≥0.80 bra, "
+                "≥0.60 acceptabelt); Bartlett's test kontrollerar att frågorna korrelerar tillräckligt "
+                "med varandra (signifikant, p < .05, är det önskade utfallet).",
+            ),
             ConceptItem("Revidering", "Att ta bort eller justera items med dåliga psykometriska egenskaper och bygga ett färdigt test."),
         ],
         related_pages=["Factor Explorer"],
@@ -158,6 +183,12 @@ LEARNING_MODULES: list[LearningModule] = [
                 "samma underliggande konstrukt.",
             ),
             ConceptItem(
+                "Item-total korrelation",
+                "Korrelationen mellan en enskild frågas poäng och summan av alla övriga frågor i "
+                "skalan. Låga värden (<0.30) betyder att frågan mäter något annat än resten av "
+                "skalan - en av de vanligaste anledningarna att ta bort eller revidera en fråga.",
+            ),
+            ConceptItem(
                 "McDonald's omega",
                 "Ett reliabilitetsmått baserat på en faktormodell, ofta mer robust än alpha "
                 "eftersom det inte antar att alla items väger lika mycket.",
@@ -172,6 +203,13 @@ LEARNING_MODULES: list[LearningModule] = [
             ConceptItem(
                 "Konfidensintervall (KI) för en poäng",
                 "Intervallet där personens sanna poäng troligen ligger, baserat på SEM.",
+            ),
+            ConceptItem(
+                "Reliable Change Index (RCI)",
+                "RCI = (poäng vid tid 2 − poäng vid tid 1) / SE_diff, där SE_diff = SEM × √2. |RCI| ≥ "
+                "1.96 tolkas som en statistiskt pålitlig förändring (Jacobson & Truax, 1991) - inte "
+                "bara mätbrus. Används för att avgöra om en förändring hos en klient över tid är "
+                "verklig eller inom det förväntade mätfelet.",
             ),
         ],
         formulas=[
@@ -225,6 +263,12 @@ LEARNING_MODULES: list[LearningModule] = [
         ),
         concepts=[
             ConceptItem("Cut score", "Gränsen mellan ett positivt och negativt testresultat. Valet påverkar avvägningen mellan sensitivitet och specificitet."),
+            ConceptItem(
+                "Konfusionsmatris",
+                "En 2×2-tabell över hur testets prediktioner (positiv/negativ) stämmer mot det "
+                "faktiska utfallet: sant positiva (TP), sant negativa (TN), falskt positiva (FP) "
+                "och falskt negativa (FN). Grunden för sensitivitet, specificitet, PPV och NPV.",
+            ),
             ConceptItem("Sensitivitet (TPR)", "Sannolikheten att testet korrekt identifierar de som verkligen har tillståndet."),
             ConceptItem("Specificitet (TNR)", "Sannolikheten att testet korrekt identifierar de som inte har tillståndet."),
             ConceptItem("False Negative (FN)", "Testet visar negativt trots att personen har tillståndet - risk: utebliven hjälp."),
@@ -263,6 +307,12 @@ LEARNING_MODULES: list[LearningModule] = [
             ConceptItem("Scalar/stark invarians", "Samma item-intercept i alla grupper - nödvändigt för att jämföra medelvärden mellan grupper."),
             ConceptItem("Strikt invarians", "Samma residualvarianser i alla grupper - den strängaste nivån."),
             ConceptItem("Cohen's d", "Ett standardiserat mått på skillnaden mellan två gruppers medelvärden, uttryckt i standardavvikelser."),
+            ConceptItem(
+                "Rättviseindex",
+                "Ett praktiskt, sammanfattande mått: 1 - |Cohen's d| / 2 (aldrig under 0) - alltså "
+                "1.0 vid ingen skillnad, avtagande mot 0 vid en mycket stor skillnad (|d| ≥ 2). Ett "
+                "enklare komplement till formell DIF- och invariansanalys, inte en ersättning för den.",
+            ),
         ],
         example=(
             "Tumregel för Cohen's d: |d| < 0.2 försumbar, 0.2-0.5 liten, 0.5-0.8 måttlig, ≥ 0.8 stor skillnad."
@@ -306,15 +356,45 @@ def get_module(key: str) -> LearningModule | None:
     return next((m for m in LEARNING_MODULES if m.key == key), None)
 
 
-def find_deeper_explanation(label: str) -> str | None:
-    """Best-effort match of a components.concept_tooltip label (e.g.
-    "Cronbach's alpha") against this module's concept terms, so Läroläge
-    (Learning Mode) can show a more thorough explanation without every
-    tooltip call site needing to know about the learning content module."""
-    label_lower = label.lower()
-    for module in LEARNING_MODULES:
-        for concept in module.concepts:
-            term_lower = concept.term.lower()
-            if label_lower in term_lower or term_lower in label_lower:
-                return concept.explanation
+_ALL_CONCEPTS: list[ConceptItem] = [c for m in LEARNING_MODULES for c in m.concepts]
+
+
+def _clean_term(term: str) -> str:
+    """Strips a leading "1. " / "3. " numbering prefix used by the Validitet
+    module's concept list, so matching works against the plain term."""
+    import re
+
+    return re.sub(r"^\d+\.\s*", "", term.lower())
+
+
+def get_concept_explanation(term: str) -> str | None:
+    """Exact (case-insensitive) lookup by concept term - use this from a
+    call site via `learning_key=` when you know precisely which concept a
+    tooltip corresponds to. Guaranteed correct, unlike the fuzzy fallback
+    below."""
+    target = _clean_term(term)
+    for concept in _ALL_CONCEPTS:
+        if _clean_term(concept.term) == target:
+            return concept.explanation
     return None
+
+
+def find_deeper_explanation(label: str) -> str | None:
+    """Best-effort fallback match of a components.concept_tooltip label
+    (e.g. "Cronbach's alpha") against concept terms, so Läroläge can show a
+    deeper explanation without every call site passing an explicit
+    `learning_key`. Concept terms shorter than 3 characters (formula symbols
+    like "T", "E", "k") are skipped entirely - matching them by substring
+    would trigger on almost any label that happens to contain that letter.
+    When multiple terms match, the longest (most specific) one wins."""
+    label_lower = label.lower()
+    best_explanation: str | None = None
+    best_len = 0
+    for concept in _ALL_CONCEPTS:
+        term_clean = _clean_term(concept.term)
+        if len(term_clean) < 3:
+            continue
+        if (term_clean in label_lower or label_lower in term_clean) and len(term_clean) > best_len:
+            best_explanation = concept.explanation
+            best_len = len(term_clean)
+    return best_explanation

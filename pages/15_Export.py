@@ -175,4 +175,4 @@ st.write("")
 col_back, _ = st.columns([1, 4])
 with col_back:
     if st.button("Tillbaka", width="stretch"):
-        st.switch_page("pages/14_Learning_Mode.py")
+        st.switch_page("pages/13_Test_Builder.py")

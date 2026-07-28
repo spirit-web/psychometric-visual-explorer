@@ -33,6 +33,7 @@ with kpi_cols[0]:
         "👥", "#DBEAFE", "Denna datamängd", "Normgrupp", caption="Sample-baserad",
         tooltip="Vilken grupp klientens resultat jämförs mot. Här används det aktiva datasetet självt "
         "som normgrupp, inte en extern standardiserad population - se info-rutan nedan.",
+        learning_key="Normgrupp (referensgrupp)",
     )
 with kpi_cols[1]:
     kpi_card(
@@ -45,6 +46,7 @@ with kpi_cols[2]:
         "📐", "#EDE9FE", "Percentil", "Normtyp",
         tooltip="Typen av normerad poäng som visas nedan - percentil anger andelen i normgruppen med "
         "lägre poäng. Samma resultat visas även som T-poäng och Z-poäng.",
+        learning_key="Percentil",
     )
 with kpi_cols[3]:
     kpi_card("🧩", "#FFEDD5", str(dataset.n_subscales), "Delskalor")
@@ -145,6 +147,7 @@ with tab_table:
             "Stanine",
             "En niogradig skala (1-9) med medel 5 och SD 2, ofta använd för enkel kommunikation "
             "av resultat. Bygger på samma z-poäng som T-poäng och percentil.",
+            learning_key="Stanine",
         )
     conversion_df = se.conversion_table(dataset, subscale_id)
     if not conversion_df.empty:

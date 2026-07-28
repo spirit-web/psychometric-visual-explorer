@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from utils.learning_content import find_deeper_explanation
+from utils.learning_content import find_deeper_explanation, get_concept_explanation
 
 
 def kpi_card(
@@ -12,6 +12,7 @@ def kpi_card(
     label: str,
     caption: str | None = None,
     tooltip: str | None = None,
+    learning_key: str | None = None,
 ) -> None:
     caption_html = f'<div style="color:#9AA4C7; font-size:0.78rem; margin-top:0.2rem;">{caption}</div>' if caption else ""
     st.markdown(
@@ -33,7 +34,7 @@ def kpi_card(
             st.markdown(f"**{label}**")
             st.write(tooltip)
             if st.session_state.get("pve_learning_mode"):
-                deeper = find_deeper_explanation(label)
+                deeper = get_concept_explanation(learning_key) if learning_key else find_deeper_explanation(label)
                 if deeper:
                     st.divider()
                     st.caption("📖 Läroläge – fördjupning")

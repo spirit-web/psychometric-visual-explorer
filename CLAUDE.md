@@ -99,8 +99,7 @@ psychometric-visual-explorer/
 │   ├── 11_Fairness_Explorer.py
 │   ├── 12_Machine_Learning.py
 │   ├── 13_Test_Builder.py
-│   ├── 14_Learning_Mode.py
-│   └── 15_Export.py
+│   └── 15_Export.py           # no page 14 - Learning Mode was folded into per-page Läroläge tooltips
 ├── components/                  # shared widgets: kpi_card, concept_tooltip, sidebar
 ├── utils/                       # config, i18n strings, small helpers
 └── tests/                       # pytest, one file per core/ engine
@@ -152,15 +151,28 @@ Two pages not in the original SRS numbering but required: Decision Support
 chosen threshold) and Fairness Explorer (DIF, measurement invariance framing,
 group comparisons, Cohen's d). Both are shown in the mockups — build to those.
 
-## Concepts that must be teachable somewhere (Learning Mode + tooltips)
+## Concepts that must be teachable somewhere (Läroläge + tooltips)
 
 Reuse the psychometrics course concept map (`docs/mockups/psykometri_begrepp.png`)
-as the content outline for Learning Mode: the six pillars (Verkligheten →
-Testutveckling → Validitet → Reliabilitet → Tolka poäng → Beslut), plus
-Fairness. Every KPI card that shows a statistic (α, SEM, factor loading, T-
-score, AUC, Cohen's d, etc.) should have a small info icon with a 1–3 sentence
-plain-language explanation — this is what makes the tool "teach," not just
-report numbers.
+as the content outline: the six pillars (Verkligheten → Testutveckling →
+Validitet → Reliabilitet → Tolka poäng → Beslut), plus Fairness. Every KPI
+card that shows a statistic (α, SEM, factor loading, T-score, AUC, Cohen's d,
+etc.) should have a small info icon with a 1–3 sentence plain-language
+explanation — this is what makes the tool "teach," not just report numbers.
+
+There is **no standalone Learning Mode page** (removed in the post-launch
+redesign's Fas 8) — exam-prep content lives in `utils/learning_content.py`
+as `LEARNING_MODULES` (one module per concept-map pillar) and surfaces
+in-place through the existing ⓘ tooltips: `components/concept_tooltip.py`
+and `components/kpi_card.py` both show an extra "📖 Läroläge – fördjupning"
+section when the sidebar's Läroläge toggle is on. Pass `learning_key="Exact
+Concept Term"` at any call site whose visible label doesn't textually
+resemble its concept term closely enough for the fuzzy fallback
+(`find_deeper_explanation`) to find it — `get_concept_explanation` does an
+exact, case-insensitive lookup by term. When you add a new tooltip for a
+concept that's on the tenta concept map but missing from `LEARNING_MODULES`,
+add a `ConceptItem` to the relevant existing module rather than inventing a
+new module or a standalone page.
 
 ## Sample data
 
