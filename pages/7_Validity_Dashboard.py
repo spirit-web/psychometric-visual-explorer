@@ -6,6 +6,7 @@ import streamlit as st
 from components.concept_tooltip import concept_tooltip
 from components.export_section import render_export_section
 from components.kpi_card import kpi_card, status_icon
+from components.validity_diagram import render_validity_wheel
 from core import plugin_engine as pe
 from core import stats_engine as se
 from core import viz_engine as ve
@@ -51,13 +52,7 @@ sources = se.validity_overview(
 )
 sources_by_key = {s.key: s for s in sources}
 counts = se.validity_status_counts(sources)
-
-if counts["strong"] >= 4:
-    agg_status, agg_label = "good", "Bra"
-elif counts["strong"] >= 2:
-    agg_status, agg_label = "warning", "Måttlig"
-else:
-    agg_status, agg_label = "bad", "Bör stärkas"
+agg_status, agg_label = se.validity_aggregate_status(counts)
 
 # --- KPI row -------------------------------------------------
 kpi_cols = st.columns(4)
@@ -77,6 +72,19 @@ tab_overview, tab_content, tab_response, tab_structure, tab_relations, tab_conse
 )
 
 with tab_overview:
+    header_cols = st.columns([5, 1])
+    header_cols[0].markdown("**Hur hänger evidenskällorna ihop?**")
+    with header_cols[1]:
+        concept_tooltip(
+            "Fem evidenskällor",
+            "Validitet är inte en enskild siffra - det är ett samlat förtroende för att poängen betyder "
+            "det de påstås betyda, byggt av flera olika typer av bevis. Hjulet nedan visar alla fem "
+            "källor runt testet, färgkodade efter hur stark evidensen är just nu. En källa markerad grå "
+            "(\"Ingen information\") betyder att inget är dokumenterat än - inte att evidensen är svag.",
+        )
+    render_validity_wheel(sources, q.test_name)
+    st.write("")
+
     col_table, col_donut = st.columns([2, 1])
     with col_table:
         st.markdown("**Evidensöversikt**")
@@ -96,6 +104,12 @@ with tab_overview:
     st.write("")
     if agg_status == "good":
         st.success(f"✅ Sammanfattning: {q.test_name} visar god evidens för de flesta validitetstyper.")
+    elif agg_label == "Data saknas":
+        st.warning(
+            f"ℹ️ Sammanfattning: Data saknas för flertalet evidenskällor - detta är **inte** ett omdöme om "
+            f"{q.test_name}s kvalitet, bara en avsaknad av dokumentation. Fyll i det du vet under respektive "
+            "flik, eller lämna det som det är tills evidensen finns."
+        )
     elif agg_status == "warning":
         st.warning(f"⚠️ Sammanfattning: {q.test_name} visar måttlig evidens - vissa källor bör stärkas.")
     else:

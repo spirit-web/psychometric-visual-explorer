@@ -176,3 +176,26 @@ def test_validity_status_counts_sum_to_source_count():
     sources = se.validity_overview(dataset)
     counts = se.validity_status_counts(sources)
     assert sum(counts.values()) == len(sources)
+
+
+def test_validity_aggregate_status_four_strong_is_good():
+    counts = {"strong": 4, "moderate": 0, "limited": 0, "none": 1}
+    assert se.validity_aggregate_status(counts) == ("good", "Bra")
+
+
+def test_validity_aggregate_status_mostly_undocumented_is_data_saknas_not_mattlig():
+    # 2 strong + 3 none used to fall into the "strong >= 2" bucket and read as
+    # "Måttlig" (moderate evidence) even though most sources are simply
+    # undocumented, not weak - this is the exact bug Fas 6 fixes.
+    counts = {"strong": 2, "moderate": 0, "limited": 0, "none": 3}
+    assert se.validity_aggregate_status(counts) == ("warning", "Data saknas")
+
+
+def test_validity_aggregate_status_two_strong_with_documented_weak_is_mattlig():
+    counts = {"strong": 2, "moderate": 2, "limited": 1, "none": 0}
+    assert se.validity_aggregate_status(counts) == ("warning", "Måttlig")
+
+
+def test_validity_aggregate_status_weak_evidence_is_bor_starkas():
+    counts = {"strong": 0, "moderate": 1, "limited": 2, "none": 2}
+    assert se.validity_aggregate_status(counts) == ("bad", "Bör stärkas")

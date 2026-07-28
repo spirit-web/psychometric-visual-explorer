@@ -948,6 +948,24 @@ def validity_status_counts(sources: list[ValiditySource]) -> dict[str, int]:
     return counts
 
 
+def validity_aggregate_status(counts: dict[str, int]) -> tuple[str, str]:
+    """Rolls the five evidence-source statuses up into one headline verdict.
+
+    Sources with no information ("none") are kept distinct from sources with
+    weak-but-present evidence ("limited"/"moderate") - lumping them together
+    would let a mostly-undocumented test (e.g. a freshly uploaded real
+    dataset with no criterion variables and no response-process notes) read
+    as "Måttlig" (moderate evidence) when the honest picture is "we don't
+    know yet", not "we checked and it's so-so"."""
+    if counts["strong"] >= 4:
+        return "good", "Bra"
+    if counts["none"] >= 3:
+        return "warning", "Data saknas"
+    if counts["strong"] >= 2:
+        return "warning", "Måttlig"
+    return "bad", "Bör stärkas"
+
+
 # --- norms -------------------------------------------------
 
 # Standard normal stanine cut-points (9-band scale with the classic
