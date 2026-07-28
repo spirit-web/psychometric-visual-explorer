@@ -227,5 +227,5 @@ with col_back:
     if st.button("Tillbaka", width="stretch"):
         st.switch_page("pages/6_Factor_Explorer.py")
 with col_next:
-    if st.button("Fortsätt till Norm Explorer →", type="primary", width="stretch"):
-        st.switch_page("pages/8_Norm_Explorer.py")
+    if st.button("Fortsätt till Machine Learning →", type="primary", width="stretch"):
+        st.switch_page("pages/12_Machine_Learning.py")

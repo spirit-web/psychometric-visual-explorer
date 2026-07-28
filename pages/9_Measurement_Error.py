@@ -170,7 +170,7 @@ st.write("")
 col_back, _, col_next = st.columns([1, 3, 1])
 with col_back:
     if st.button("Tillbaka", width="stretch"):
-        st.switch_page("pages/8_Norm_Explorer.py")
-with col_next:
-    if st.button("Fortsätt till Decision Support →", type="primary", width="stretch"):
         st.switch_page("pages/10_Decision_Support.py")
+with col_next:
+    if st.button("Fortsätt till Fairness Explorer →", type="primary", width="stretch"):
+        st.switch_page("pages/11_Fairness_Explorer.py")

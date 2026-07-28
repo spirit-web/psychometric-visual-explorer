@@ -148,7 +148,7 @@ st.write("")
 col_back, _, col_next = st.columns([1, 3, 1])
 with col_back:
     if st.button("Tillbaka", width="stretch"):
-        st.switch_page("pages/7_Validity_Dashboard.py")
+        st.switch_page("pages/3_Psychometric_QC.py")
 with col_next:
-    if st.button("Fortsätt till Measurement Error →", type="primary", width="stretch"):
-        st.switch_page("pages/9_Measurement_Error.py")
+    if st.button("Fortsätt till Decision Support →", type="primary", width="stretch"):
+        st.switch_page("pages/10_Decision_Support.py")

@@ -166,7 +166,7 @@ st.write("")
 col_back, _, col_next = st.columns([1, 3, 1])
 with col_back:
     if st.button("Tillbaka", width="stretch"):
-        st.switch_page("pages/10_Decision_Support.py")
+        st.switch_page("pages/9_Measurement_Error.py")
 with col_next:
-    if st.button("Fortsätt till Machine Learning →", type="primary", width="stretch"):
-        st.switch_page("pages/12_Machine_Learning.py")
+    if st.button("Fortsätt till Reliability Explorer →", type="primary", width="stretch"):
+        st.switch_page("pages/5_Reliability_Explorer.py")

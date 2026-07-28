@@ -331,7 +331,7 @@ st.write("")
 col_back, _, col_next = st.columns([1, 3, 1])
 with col_back:
     if st.button("Tillbaka", width="stretch"):
-        st.switch_page("pages/11_Fairness_Explorer.py")
+        st.switch_page("pages/7_Validity_Dashboard.py")
 with col_next:
     if st.button("Fortsätt till Test Builder →", type="primary", width="stretch"):
         st.switch_page("pages/13_Test_Builder.py")
