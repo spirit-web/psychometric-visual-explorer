@@ -14,25 +14,32 @@ def select_or_enter_client(dataset, subscale_id: str | None, key_prefix: str) ->
     """Renders the person-selector/manual-entry UI and returns the raw
     subscale score for whichever client the user selected or described."""
     q = dataset.questionnaire
-    source = st.radio(
-        "Vems resultat?",
-        ["Person ur datasetet", "En ny klients svar (manuellt)"],
-        horizontal=True,
-        key=f"{key_prefix}_source",
-    )
+    col_source, col_select, col_name = st.columns([1.3, 1.7, 1])
+    with col_source:
+        source = st.radio(
+            "Vems resultat?",
+            ["Person ur datasetet", "En ny klients svar (manuellt)"],
+            key=f"{key_prefix}_source",
+            label_visibility="collapsed",
+        )
 
     if source == "Person ur datasetet":
         ids = se.person_ids(dataset)
-        col_select, col_name = st.columns([2, 1])
         with col_select:
             person_id = st.selectbox(
-                "Välj person", ids, format_func=client_label, key=f"{key_prefix}_person"
+                "Välj person",
+                ids,
+                format_func=client_label,
+                key=f"{key_prefix}_person",
+                label_visibility="collapsed",
             )
         with col_name:
             alias = st.text_input(
                 "Namnge (valfritt)",
                 value=get_client_alias(person_id) or "",
                 key=f"{key_prefix}_alias_{person_id}",
+                placeholder="Namnge (valfritt)",
+                label_visibility="collapsed",
                 help="Bara för din egen presentation - sparas inte i datasetet.",
             )
             set_client_alias(person_id, alias)

@@ -13,8 +13,8 @@ from utils.session import require_dataset
 dataset = require_dataset()
 q = dataset.questionnaire
 
+st.markdown("<style>.block-container{padding-top:1rem;}</style>", unsafe_allow_html=True)
 st.title("Norm Explorer")
-st.caption(f"Jämför en klients resultat med normgruppen för {q.test_name}")
 
 subscale_options = {s.name: s.id for s in q.subscales} if len(q.subscales) > 1 else {}
 if subscale_options:
@@ -31,8 +31,10 @@ kpi_cols = st.columns(4)
 with kpi_cols[0]:
     kpi_card(
         "👥", "#DBEAFE", "Denna datamängd", "Normgrupp", caption="Sample-baserad",
-        tooltip="Vilken grupp klientens resultat jämförs mot. Här används det aktiva datasetet självt "
-        "som normgrupp, inte en extern standardiserad population - se info-rutan nedan.",
+        tooltip="Vilken grupp klientens resultat jämförs mot. Normerna här är beräknade från "
+        "datasetets egna medelvärde och standardavvikelse - **inte** en extern, standardiserad "
+        "populationsnorm, utan en sample-baserad referens. Ersätt med riktiga normdata om sådana "
+        "finns tillgängliga.",
         learning_key="Normgrupp (referensgrupp)",
     )
 with kpi_cols[1]:
@@ -50,14 +52,6 @@ with kpi_cols[2]:
     )
 with kpi_cols[3]:
     kpi_card("🧩", "#FFEDD5", str(dataset.n_subscales), "Delskalor")
-
-st.info(
-    "ℹ️ Normerna här är beräknade från datasetets egna medelvärde och standardavvikelse - "
-    "detta är **inte** en extern, standardiserad populationsnorm, utan en sample-baserad "
-    "referens. Ersätt med riktiga normdata om sådana finns tillgängliga."
-)
-
-st.write("")
 
 tab_overview, tab_table = st.tabs(["Klientöversikt", "Omvandlingstabell"])
 
