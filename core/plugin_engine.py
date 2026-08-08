@@ -13,7 +13,8 @@ import pandas as pd
 from loguru import logger
 from pydantic import ValidationError
 
-from core.data_model import Cutoff, Item, Questionnaire, ResponseScale, Subscale
+from core.data_model import Cutoff, Dataset, Item, Questionnaire, ResponseScale, Subscale
+from core.import_engine import build_dataset
 
 PLUGINS_DIR = Path(__file__).resolve().parent.parent / "plugins"
 PLUGIN_ID_PATTERN = re.compile(r"^[a-z][a-z0-9_]{2,49}$")
@@ -243,6 +244,25 @@ def questionnaire_from_tables(
         return questionnaire, None
     except (ValidationError, ValueError, TypeError) as exc:
         return None, f"Ogiltig testdefinition: {exc}"
+
+
+def apply_draft_to_dataset(dataset: Dataset, draft: Questionnaire) -> Dataset:
+    """Re-scores the currently loaded raw data against a Test Builder draft
+    (e.g. the active test with two items removed) and returns a new active
+    Dataset - without a disk round-trip through save_plugin() + re-uploading
+    via Import Wizard. Items the draft dropped are simply excluded from the
+    rebuilt column mapping; items the draft added that have no matching raw
+    column are left unscored (build_dataset already tolerates that, same as
+    a partially-mapped Import Wizard upload)."""
+    draft_item_ids = {item.id for item in draft.items}
+    filtered_mapping = {item_id: col for item_id, col in dataset.column_mapping.items() if item_id in draft_item_ids}
+    return build_dataset(
+        raw=dataset.raw,
+        questionnaire=draft,
+        column_mapping=filtered_mapping,
+        demographic_columns=dataset.demographic_columns,
+        name=f"{draft.test_name} (utkast)",
+    )
 
 
 # --- Validity Dashboard: default evidence for well-established bundled tests ---

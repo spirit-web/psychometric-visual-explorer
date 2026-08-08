@@ -63,6 +63,31 @@ def _load_working_copy(questionnaire, source_id: str) -> None:
     st.session_state["tb_cutoffs_df"] = cutoffs_df
 
 
+def _draft_questionnaire(plugin_id: str):
+    """Builds a Questionnaire from the current working-copy tables. Shared
+    by "Använd som aktivt dataset" and the Spara-tab's save button so the
+    table-to-Questionnaire logic lives in one place."""
+    scale_labels = {
+        str(row["value"]).strip(): str(row["label"]).strip()
+        for _, row in st.session_state["tb_scale_labels_df"].iterrows()
+        if str(row.get("value", "")).strip()
+    }
+    return pe.questionnaire_from_tables(
+        plugin_id=plugin_id,
+        test_name=st.session_state["tb_test_name"],
+        full_name=st.session_state["tb_full_name"],
+        language=st.session_state["tb_language"],
+        source_citation=st.session_state["tb_source_citation"],
+        scale_min=int(st.session_state["tb_scale_min"]),
+        scale_max=int(st.session_state["tb_scale_max"]),
+        scale_prompt=st.session_state["tb_scale_prompt"] or None,
+        scale_labels=scale_labels,
+        items_df=st.session_state["tb_items_df"],
+        subscales_df=st.session_state["tb_subscales_df"],
+        cutoffs_df=st.session_state["tb_cutoffs_df"],
+    )
+
+
 # (Re)initialize the working copy whenever the active test changes.
 if st.session_state.get("tb_source_plugin_id") != q.plugin_id:
     _load_working_copy(q, q.plugin_id)
@@ -90,6 +115,31 @@ with kpi_cols[2]:
     kpi_card("🧩", "#EDE9FE", str(len(st.session_state["tb_subscales_df"])), "Delskalor i utkast")
 with kpi_cols[3]:
     kpi_card("🏷️", "#FFEDD5", q.plugin_id, "Källa (aktivt test)")
+
+st.write("")
+
+if st.button(
+    "🔁 Använd som aktivt dataset",
+    type="primary",
+    width="stretch",
+    help="Räknar om det redan inlästa datasetet mot utkastet nedan direkt - utan att spara en ny "
+    "pluginfil eller ladda upp datan igen. Gå sedan till t.ex. Reliability Explorer eller Factor "
+    "Explorer för att se effekten.",
+):
+    draft_plugin_id = (
+        f"{st.session_state['tb_source_plugin_id']}_utkast"
+        if st.session_state["tb_source_plugin_id"] != "__blank__"
+        else "eget_test_utkast"
+    )
+    draft, error = _draft_questionnaire(draft_plugin_id)
+    if error:
+        st.error(f"🛑 {error}")
+    else:
+        st.session_state["pve_dataset"] = pe.apply_draft_to_dataset(dataset, draft)
+        st.success(
+            f"✅ Aktivt dataset uppdaterat mot utkastet ({len(draft.items)} frågor, "
+            f"{len(draft.subscales)} delskalor). Öppna en annan sida i menyn för att se effekten."
+        )
 
 st.write("")
 
@@ -261,25 +311,7 @@ with tab_save:
     overwrite = st.checkbox("Skriv över om detta plugin-id redan finns", value=False)
 
     if st.button("💾 Spara som ny testdefinition", type="primary"):
-        scale_labels = {
-            str(row["value"]).strip(): str(row["label"]).strip()
-            for _, row in st.session_state["tb_scale_labels_df"].iterrows()
-            if str(row.get("value", "")).strip()
-        }
-        questionnaire, error = pe.questionnaire_from_tables(
-            plugin_id=new_plugin_id.strip(),
-            test_name=st.session_state["tb_test_name"],
-            full_name=st.session_state["tb_full_name"],
-            language=st.session_state["tb_language"],
-            source_citation=st.session_state["tb_source_citation"],
-            scale_min=int(st.session_state["tb_scale_min"]),
-            scale_max=int(st.session_state["tb_scale_max"]),
-            scale_prompt=st.session_state["tb_scale_prompt"] or None,
-            scale_labels=scale_labels,
-            items_df=st.session_state["tb_items_df"],
-            subscales_df=st.session_state["tb_subscales_df"],
-            cutoffs_df=st.session_state["tb_cutoffs_df"],
-        )
+        questionnaire, error = _draft_questionnaire(new_plugin_id.strip())
         if error:
             st.error(f"🛑 {error}")
         else:

@@ -3,6 +3,7 @@ import pytest
 
 from core import plugin_engine as pe
 from core.data_model import Item, Questionnaire, ResponseScale, Subscale
+from core.import_engine import build_dataset
 
 
 def _sample_questionnaire() -> Questionnaire:
@@ -139,6 +140,86 @@ def test_questionnaire_from_tables_errors_on_no_items():
     )
     assert q is None
     assert error is not None
+
+
+def test_apply_draft_to_dataset_rescopes_using_the_same_raw_data():
+    q = _sample_questionnaire()  # items D1, D2 (D2 reverse-scored), subscale "total"
+    raw = pd.DataFrame(
+        {"resp_id": [1, 2], "col_d1": [1, 2], "col_d2": [0, 1], "age": [30, 40]}
+    )
+    mapping = {"D1": "col_d1", "D2": "col_d2"}
+    dataset = build_dataset(raw=raw, questionnaire=q, column_mapping=mapping, demographic_columns=["age"], name="Demo")
+
+    # Draft: Test Builder's "Korta ner testet" dropped D2 - only D1 remains.
+    draft_items_df = pd.DataFrame([{"id": "D1", "text": "Fråga 1", "subscale": "total", "reverse_scored": False}])
+    draft_subscales_df = pd.DataFrame(
+        [{"id": "total", "name": "Total", "item_ids": "D1", "score_min": 0, "score_max": 3, "scoring_method": "sum"}]
+    )
+    draft, error = pe.questionnaire_from_tables(
+        plugin_id="demo_test_utkast",
+        test_name="Demo",
+        full_name="Demo Full",
+        language="sv",
+        source_citation=None,
+        scale_min=0,
+        scale_max=3,
+        scale_prompt=None,
+        scale_labels={},
+        items_df=draft_items_df,
+        subscales_df=draft_subscales_df,
+        cutoffs_df=pd.DataFrame(columns=["label", "range_min", "range_max"]),
+    )
+    assert error is None
+
+    new_dataset = pe.apply_draft_to_dataset(dataset, draft)
+
+    # Only D1 stayed in the column mapping - D2 was dropped, not carried over.
+    assert list(new_dataset.column_mapping.keys()) == ["D1"]
+    # Re-scored against the same raw data, using only the retained item.
+    assert new_dataset.scored["total_total"].tolist() == [1, 2]
+    # Untouched fields pass through unchanged.
+    assert new_dataset.raw is dataset.raw
+    assert new_dataset.demographic_columns == ["age"]
+    assert new_dataset.questionnaire.plugin_id == "demo_test_utkast"
+
+
+def test_apply_draft_to_dataset_tolerates_a_newly_added_unmapped_item():
+    q = _sample_questionnaire()
+    raw = pd.DataFrame({"resp_id": [1, 2], "col_d1": [1, 2], "col_d2": [0, 1]})
+    mapping = {"D1": "col_d1", "D2": "col_d2"}
+    dataset = build_dataset(raw=raw, questionnaire=q, column_mapping=mapping, name="Demo")
+
+    # Draft adds a brand-new item ("D3") with no corresponding raw column yet.
+    draft_items_df = pd.DataFrame(
+        [
+            {"id": "D1", "text": "Fråga 1", "subscale": "total", "reverse_scored": False},
+            {"id": "D2", "text": "Fråga 2", "subscale": "total", "reverse_scored": True},
+            {"id": "D3", "text": "Ny egen fråga", "subscale": "total", "reverse_scored": False},
+        ]
+    )
+    draft_subscales_df = pd.DataFrame(
+        [{"id": "total", "name": "Total", "item_ids": "D1, D2, D3", "score_min": 0, "score_max": 9, "scoring_method": "sum"}]
+    )
+    draft, error = pe.questionnaire_from_tables(
+        plugin_id="demo_test_utkast",
+        test_name="Demo",
+        full_name="Demo Full",
+        language="sv",
+        source_citation=None,
+        scale_min=0,
+        scale_max=3,
+        scale_prompt=None,
+        scale_labels={},
+        items_df=draft_items_df,
+        subscales_df=draft_subscales_df,
+        cutoffs_df=pd.DataFrame(columns=["label", "range_min", "range_max"]),
+    )
+    assert error is None
+
+    # Never raises, even though D3 has no raw column to map.
+    new_dataset = pe.apply_draft_to_dataset(dataset, draft)
+    assert "D3" not in new_dataset.column_mapping
+    assert "D3" not in new_dataset.scored.columns
 
 
 def test_questionnaire_from_tables_errors_on_no_subscales():
