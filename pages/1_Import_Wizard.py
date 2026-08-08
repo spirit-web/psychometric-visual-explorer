@@ -43,6 +43,16 @@ for key, value in DEFAULTS.items():
     if key not in st.session_state:
         st.session_state[key] = value
 
+# If the wizard was used to completion last visit (a dataset was created and
+# we switched away), start fresh at step 1 next time this page is opened -
+# otherwise it would silently reopen on the review step for the dataset
+# that's already loaded, requiring an extra "Tillbaka" click to import
+# something new. Reset happens here, before anything below reads iw_step,
+# so no st.rerun() is needed.
+if st.session_state.pop("iw_completed", False):
+    for key, value in DEFAULTS.items():
+        st.session_state[key] = value
+
 if st.session_state["iw_plugins"] is None:
     st.session_state["iw_plugins"] = load_all_plugins()
 
@@ -62,6 +72,21 @@ def set_raw_data(df: pd.DataFrame, source_name: str) -> None:
     st.session_state["iw_raw_df"] = df
     st.session_state["iw_source_name"] = source_name
     st.session_state["iw_auto_matched"] = False
+
+
+def create_dataset_and_continue(df: pd.DataFrame, questionnaire, mapping: dict, columns: list[str]) -> None:
+    """Shared handler for both the top and bottom "Skapa dataset" buttons."""
+    demographic_columns = [c for c in columns if c not in mapping.values()]
+    dataset = build_dataset(
+        raw=df,
+        questionnaire=questionnaire,
+        column_mapping=mapping,
+        demographic_columns=demographic_columns,
+        name=st.session_state["iw_source_name"] or questionnaire.test_name,
+    )
+    st.session_state["pve_dataset"] = dataset
+    st.session_state["iw_completed"] = True
+    st.switch_page("pages/2_Dataset_Overview.py")
 
 
 def render_stepper(current: int) -> None:
@@ -166,6 +191,10 @@ elif step == 2:
     kpi_cols[1].metric("Kolumner totalt", len(df.columns))
     kpi_cols[2].metric("Identifierade frågor", f"{n_matched} / {n_total_items}" if questionnaire is not None else "–")
 
+    ready_top = questionnaire is not None and len(mapping) > 0
+    if st.button("Skapa dataset →", type="primary", width="stretch", disabled=not ready_top, key="iw_create_top"):
+        create_dataset_and_continue(df, questionnaire, mapping, columns)
+
     st.write("**Förhandsgranskning**")
     st.dataframe(df.head(10), width="stretch")
 
@@ -196,14 +225,5 @@ elif step == 2:
             go_to(1)
     with col_next:
         ready = questionnaire is not None and len(mapping) > 0
-        if st.button("Skapa dataset →", type="primary", width="stretch", disabled=not ready):
-            demographic_columns = [c for c in columns if c not in mapping.values()]
-            dataset = build_dataset(
-                raw=df,
-                questionnaire=questionnaire,
-                column_mapping=mapping,
-                demographic_columns=demographic_columns,
-                name=st.session_state["iw_source_name"] or questionnaire.test_name,
-            )
-            st.session_state["pve_dataset"] = dataset
-            st.switch_page("pages/2_Dataset_Overview.py")
+        if st.button("Skapa dataset →", type="primary", width="stretch", disabled=not ready, key="iw_create_bottom"):
+            create_dataset_and_continue(df, questionnaire, mapping, columns)
