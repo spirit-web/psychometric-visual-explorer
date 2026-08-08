@@ -7,6 +7,7 @@ logic lives in core/stats_engine.score_manual_responses."""
 import streamlit as st
 
 from core import stats_engine as se
+from utils.session import client_label, get_client_alias, set_client_alias
 
 
 def select_or_enter_client(dataset, subscale_id: str | None, key_prefix: str) -> float | None:
@@ -22,7 +23,19 @@ def select_or_enter_client(dataset, subscale_id: str | None, key_prefix: str) ->
 
     if source == "Person ur datasetet":
         ids = se.person_ids(dataset)
-        person_id = st.selectbox("Välj person", ids, format_func=lambda pid: f"Person {pid}", key=f"{key_prefix}_person")
+        col_select, col_name = st.columns([2, 1])
+        with col_select:
+            person_id = st.selectbox(
+                "Välj person", ids, format_func=client_label, key=f"{key_prefix}_person"
+            )
+        with col_name:
+            alias = st.text_input(
+                "Namnge (valfritt)",
+                value=get_client_alias(person_id) or "",
+                key=f"{key_prefix}_alias_{person_id}",
+                help="Bara för din egen presentation - sparas inte i datasetet.",
+            )
+            set_client_alias(person_id, alias)
         return se.person_raw_score(dataset, person_id, subscale_id)
 
     st.caption("Ange klientens svar på varje fråga - klienten behöver inte redan finnas i det inlästa datasetet.")

@@ -15,7 +15,7 @@ from components.kpi_card import kpi_card
 from core import ml_engine as ml
 from core import stats_engine as se
 from core import viz_engine as ve
-from utils.session import require_dataset
+from utils.session import client_label, get_client_alias, require_dataset, set_client_alias
 
 dataset = require_dataset()
 q = dataset.questionnaire
@@ -326,7 +326,17 @@ with tab_predict:
         if not person_ids:
             st.info("Ingen person i datasetet har fullständig data för prediktion.")
         else:
-            person_id = st.selectbox("Välj person", person_ids, format_func=lambda pid: f"Person {pid}")
+            col_select, col_name = st.columns([2, 1])
+            with col_select:
+                person_id = st.selectbox("Välj person", person_ids, format_func=client_label)
+            with col_name:
+                alias = st.text_input(
+                    "Namnge (valfritt)",
+                    value=get_client_alias(person_id) or "",
+                    key=f"ml_predict_alias_{person_id}",
+                    help="Bara för din egen presentation - sparas inte i datasetet.",
+                )
+                set_client_alias(person_id, alias)
             feature_vector = ml.feature_vector_for_person(ml_data, dataset, person_id)
             actual = ml.actual_outcome_for_person(dataset, person_id)
 
