@@ -72,6 +72,20 @@ tab_overview, tab_content, tab_response, tab_structure, tab_relations, tab_conse
 )
 
 with tab_overview:
+    if agg_status == "good":
+        st.success(f"✅ Sammanfattning: {q.test_name} visar god evidens för de flesta validitetstyper.")
+    elif agg_label == "Data saknas":
+        st.warning(
+            f"ℹ️ Sammanfattning: Data saknas för flertalet evidenskällor - detta är **inte** ett omdöme om "
+            f"{q.test_name}s kvalitet, bara en avsaknad av dokumentation. Fyll i det du vet under respektive "
+            "flik, eller lämna det som det är tills evidensen finns."
+        )
+    elif agg_status == "warning":
+        st.warning(f"⚠️ Sammanfattning: {q.test_name} visar måttlig evidens - vissa källor bör stärkas.")
+    else:
+        st.error("🛑 Sammanfattning: Flera evidenskällor saknar stark dokumentation.")
+
+    st.write("")
     header_cols = st.columns([5, 1])
     header_cols[0].markdown("**Hur hänger evidenskällorna ihop?**")
     with header_cols[1]:
@@ -100,20 +114,6 @@ with tab_overview:
         donut_data = pd.Series({STATUS_OPTIONS[k]: v for k, v in counts.items() if v > 0})
         if not donut_data.empty:
             st.plotly_chart(ve.demographics_donut(donut_data), width="stretch", key="validity_donut")
-
-    st.write("")
-    if agg_status == "good":
-        st.success(f"✅ Sammanfattning: {q.test_name} visar god evidens för de flesta validitetstyper.")
-    elif agg_label == "Data saknas":
-        st.warning(
-            f"ℹ️ Sammanfattning: Data saknas för flertalet evidenskällor - detta är **inte** ett omdöme om "
-            f"{q.test_name}s kvalitet, bara en avsaknad av dokumentation. Fyll i det du vet under respektive "
-            "flik, eller lämna det som det är tills evidensen finns."
-        )
-    elif agg_status == "warning":
-        st.warning(f"⚠️ Sammanfattning: {q.test_name} visar måttlig evidens - vissa källor bör stärkas.")
-    else:
-        st.error("🛑 Sammanfattning: Flera evidenskällor saknar stark dokumentation.")
 
 with tab_content:
     source = sources_by_key["content"]

@@ -86,6 +86,9 @@ with tab_overview:
     threshold = st.slider("Välj tröskel", int(lo), int(hi), int(round(optimal.threshold)))
     metrics = se.confusion_at_threshold(dataset, threshold, subscale_id)
 
+    if threshold == round(optimal.threshold):
+        st.success(f"✅ Denna tröskel maximerar Youden's J ({optimal.youdens_j:.2f}) - bästa balans mellan sensitivitet och specificitet.")
+
     col_roc, col_cm = st.columns(2)
     with col_roc:
         header_cols = st.columns([5, 1])
@@ -135,9 +138,6 @@ with tab_overview:
         metric_cols[1].metric("Specificitet (TNR)", f"{metrics.specificity:.2f}")
         metric_cols[2].metric("PPV (Precision)", f"{metrics.ppv:.2f}")
         metric_cols[3].metric("NPV", f"{metrics.npv:.2f}")
-
-        if threshold == round(optimal.threshold):
-            st.success(f"✅ Denna tröskel maximerar Youden's J ({optimal.youdens_j:.2f}) - bästa balans mellan sensitivitet och specificitet.")
 
 with tab_cutoffs:
     header_cols = st.columns([5, 1])

@@ -38,6 +38,13 @@ st.caption(
 )
 efa = se.efa_fit(dataset, int(n_factors))
 
+if efa is not None and efa.fit.rmsea is not None:
+    good_fit = efa.fit.rmsea < 0.08 and (efa.fit.cfi is None or efa.fit.cfi >= 0.90)
+    if good_fit:
+        st.success("✅ God modellpassning. Modellen visar bra passform till data.")
+    else:
+        st.warning("⚠️ Måttlig modellpassning. Överväg ett annat antal faktorer ovan.")
+
 st.write("")
 
 # --- KPI row -------------------------------------------------
@@ -173,11 +180,6 @@ with tab_overview:
                 "\"Måttlig\", vilket ofta betyder att ett annat antal faktorer bör provas.",
             )
         if efa is not None and efa.fit.rmsea is not None:
-            good_fit = efa.fit.rmsea < 0.08 and (efa.fit.cfi is None or efa.fit.cfi >= 0.90)
-            if good_fit:
-                st.success("✅ God modellpassning. Modellen visar bra passform till data.")
-            else:
-                st.warning("⚠️ Måttlig modellpassning. Överväg ett annat antal faktorer.")
             fit_cols = st.columns(4)
             fit_cols[0].metric("RMSEA", f"{efa.fit.rmsea:.3f}")
             fit_cols[1].metric("CFI", f"{efa.fit.cfi:.2f}" if efa.fit.cfi is not None else "–")

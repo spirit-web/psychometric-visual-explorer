@@ -69,6 +69,14 @@ item_df = pd.DataFrame(
 ).set_index("item")
 
 with tab_overview:
+    worsening = [i for i in item_stats if i.alpha_if_deleted is not None and overall.alpha is not None and i.alpha_if_deleted > overall.alpha]
+    if worsening:
+        names = ", ".join(i.item_id for i in worsening)
+        st.warning(f"⚠️ {len(worsening)} fråga/frågor skulle höja alpha om de togs bort: {names}.")
+    else:
+        st.success("✅ Reliabiliteten är god. Ingen fråga försämrar skalan om den tas bort.")
+
+    st.write("")
     col_r, col_alpha = st.columns(2)
     with col_r:
         header_cols = st.columns([5, 1])
@@ -102,14 +110,6 @@ with tab_overview:
         for item_id, row in item_df.iterrows():
             rows.append({"Aktuellt": item_id, "Alpha": round(row["alpha_if_deleted"], 3) if pd.notna(row["alpha_if_deleted"]) else "–"})
         st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
-
-    st.write("")
-    worsening = [i for i in item_stats if i.alpha_if_deleted is not None and overall.alpha is not None and i.alpha_if_deleted > overall.alpha]
-    if worsening:
-        names = ", ".join(i.item_id for i in worsening)
-        st.warning(f"⚠️ {len(worsening)} fråga/frågor skulle höja alpha om de togs bort: {names}.")
-    else:
-        st.success("✅ Reliabiliteten är god. Ingen fråga försämrar skalan om den tas bort.")
 
 with tab_item:
     st.markdown("**Item-total korrelationer och tolkning**")

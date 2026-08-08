@@ -72,6 +72,15 @@ st.write("")
 tab_overview, tab_client, tab_invariance = st.tabs(["Översikt", "Klient vs. grupper", "DIF & Measurement Invariance"])
 
 with tab_overview:
+    st.markdown("**Rekommendationer för rättvisa**")
+    if summary.bias_level == "low":
+        st.success("✅ Inga meningsfulla gruppskillnader identifierade. Fortsätt övervaka rättvisa över tid och vid nya grupper.")
+    elif summary.bias_level == "moderate":
+        st.warning(f"⚠️ Måttlig skillnad identifierad ({summary.max_d_label}, d = {summary.max_abs_d:.2f}). Undersök källan närmare innan testet används för viktiga beslut.")
+    else:
+        st.error(f"🛑 Stor skillnad identifierad ({summary.max_d_label}, d = {summary.max_abs_d:.2f}). Överväg normjustering eller granska testet för potentiell bias innan det används för beslut.")
+
+    st.write("")
     col_table, col_chart = st.columns(2)
     with col_table:
         header_cols = st.columns([5, 1])
@@ -101,15 +110,6 @@ with tab_overview:
         fairness_fig = ve.group_comparison_bar_chart(labels, d_values)
         st.plotly_chart(fairness_fig, width="stretch")
         st.caption("Positiva värden indikerar högre medelvärde för jämförelsegruppen.")
-
-    st.write("")
-    st.markdown("**Rekommendationer för rättvisa**")
-    if summary.bias_level == "low":
-        st.success("✅ Inga meningsfulla gruppskillnader identifierade. Fortsätt övervaka rättvisa över tid och vid nya grupper.")
-    elif summary.bias_level == "moderate":
-        st.warning(f"⚠️ Måttlig skillnad identifierad ({summary.max_d_label}, d = {summary.max_abs_d:.2f}). Undersök källan närmare innan testet används för viktiga beslut.")
-    else:
-        st.error(f"🛑 Stor skillnad identifierad ({summary.max_d_label}, d = {summary.max_abs_d:.2f}). Överväg normjustering eller granska testet för potentiell bias innan det används för beslut.")
 
     st.write("")
     st.markdown("**Detaljerad tabell**")

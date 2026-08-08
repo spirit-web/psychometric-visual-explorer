@@ -163,6 +163,15 @@ with tab_shorten:
         "bidrar minst till reliabiliteten och därför är säkrast att ta bort om du vill korta ner testet."
     )
     item_stats = se.item_level_table(dataset)
+    weak_items = [i.item_id for i in item_stats if i.item_total_r is not None and i.item_total_r < 0.30]
+    if weak_items:
+        st.warning(
+            f"⚠️ {len(weak_items)} fråga/frågor har låg item-total-korrelation (<0.30) och bidrar minst "
+            f"till skalan: {', '.join(weak_items)}. Kandidater att ta bort om testet ska kortas ner."
+        )
+    else:
+        st.success("✅ Alla frågor har rimlig item-total-korrelation (≥0.30) - inget uppenbart att ta bort.")
+
     shorten_rows = [
         {
             "Item": i.item_id,
@@ -175,15 +184,6 @@ with tab_shorten:
     ]
     shorten_df = pd.DataFrame(shorten_rows).sort_values("Item-total r", na_position="last")
     st.dataframe(shorten_df, width="stretch", hide_index=True)
-
-    weak_items = [i.item_id for i in item_stats if i.item_total_r is not None and i.item_total_r < 0.30]
-    if weak_items:
-        st.warning(
-            f"⚠️ {len(weak_items)} fråga/frågor har låg item-total-korrelation (<0.30) och bidrar minst "
-            f"till skalan: {', '.join(weak_items)}. Kandidater att ta bort om testet ska kortas ner."
-        )
-    else:
-        st.success("✅ Alla frågor har rimlig item-total-korrelation (≥0.30) - inget uppenbart att ta bort.")
 
     to_remove = st.multiselect(
         "Välj frågor att ta bort från utkastet",

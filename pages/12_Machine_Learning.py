@@ -101,6 +101,15 @@ tab_overview, tab_prep, tab_unsup, tab_models, tab_importance, tab_predict = st.
 )
 
 with tab_overview:
+    if best.roc_auc >= 0.8:
+        st.success(f"✅ {best_name} visar god förmåga att skilja mellan grupperna (AUC = {best.roc_auc:.2f}).")
+    elif best.roc_auc >= 0.7:
+        st.warning(f"⚠️ {best_name} visar acceptabel men förbättringsbar förmåga att skilja mellan grupperna (AUC = {best.roc_auc:.2f}).")
+    else:
+        st.error(f"🛑 {best_name} visar svag förmåga att skilja mellan grupperna (AUC = {best.roc_auc:.2f}).")
+    st.caption("Modellen är ett beslutsstöd och ersätter inte klinisk bedömning. EDA och deskriptiv statistik finns i Dataset Overview och Psychometric QC.")
+
+    st.write("")
     col_roc, col_metrics = st.columns(2)
     with col_roc:
         st.markdown(f"**Model Performance ({best_name})**")
@@ -134,15 +143,6 @@ with tab_overview:
         st.plotly_chart(ve.horizontal_bar_chart(top10, "Relativ betydelse"), width="stretch", key="ml_overview_importance")
     else:
         st.info(f"{best_name} har ingen inbyggd feature importance. Se fliken Feature Importance för SHAP-analys.")
-
-    st.write("")
-    if best.roc_auc >= 0.8:
-        st.success(f"✅ {best_name} visar god förmåga att skilja mellan grupperna (AUC = {best.roc_auc:.2f}).")
-    elif best.roc_auc >= 0.7:
-        st.warning(f"⚠️ {best_name} visar acceptabel men förbättringsbar förmåga att skilja mellan grupperna (AUC = {best.roc_auc:.2f}).")
-    else:
-        st.error(f"🛑 {best_name} visar svag förmåga att skilja mellan grupperna (AUC = {best.roc_auc:.2f}).")
-    st.caption("Modellen är ett beslutsstöd och ersätter inte klinisk bedömning. EDA och deskriptiv statistik finns i Dataset Overview och Psychometric QC.")
 
 with tab_prep:
     header_cols = st.columns([5, 1])

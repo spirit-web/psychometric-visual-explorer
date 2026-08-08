@@ -61,6 +61,15 @@ with kpi_cols[3]:
 
 st.write("")
 
+if summary.status == "good":
+    st.success(f"✅ {summary.message}")
+elif summary.status == "warning":
+    st.warning(f"⚠️ {summary.message}")
+else:
+    st.error(f"🛑 {summary.message}")
+
+st.write("")
+
 # --- Missing per item chart / Kontroller table -------------------------------------------------
 col_missing, col_checks = st.columns(2)
 with col_missing:
@@ -98,15 +107,6 @@ with col_checks:
         [{"Kontroll": c.name, "Status": status_icon(c.status), "Kommentar": c.comment} for c in summary.checks]
     )
     st.dataframe(checks_df, width="stretch", hide_index=True)
-
-st.write("")
-
-if summary.status == "good":
-    st.success(f"✅ {summary.message}")
-elif summary.status == "warning":
-    st.warning(f"⚠️ {summary.message}")
-else:
-    st.error(f"🛑 {summary.message}")
 
 st.write("")
 render_export_section(
