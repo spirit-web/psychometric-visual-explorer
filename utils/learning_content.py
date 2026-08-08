@@ -505,6 +505,25 @@ LEARNING_MODULES: list[LearningModule] = [
                 "tröskel fångar färre falska positiva men missar fler sanna fall\") är precis vad M1 "
                 "F11-F14 vill att du resonerar kring.",
             ),
+            ConceptItem(
+                "Kapacitetsbegränsad prioritering",
+                "En fast tröskel antar att du kan agera på alla som hamnar över den. I praktiken har "
+                "man ofta ett tak - t.ex. ett begränsat antal uppföljningstider. Rangordna då alla "
+                "efter poäng eller risk (högst först) och gå nedåt listan tills kapaciteten tar slut, "
+                "istället för att bara fråga ja/nej mot en gräns. Fångstgraden - hur stor andel av de "
+                "verkliga fallen som ryms inom kapaciteten - blir det konkreta måttet på hur bra "
+                "rangordningen är.\n\n"
+                "**I storyn:** Det direkta svaret på \"varför spelar AUC 0,80 mot 0,81 någon roll?\" - "
+                "Sara har inte oändlig tid, bara 150 platser för 1000 svar. Decision Support visar "
+                "fångstgraden med enkel totalpoäng som rangordning; Machine Learning visar samma sak "
+                "med modellens sannolikhet - samma flik, samma funktion, olika poäng att rangordna efter.\n\n"
+                "**AI-kursen:** Kärna-adjacent - motsvarar en cumulative gains/lift-kurva, ett "
+                "standardsätt att utvärdera en modell mot en verklig kapacitetsbegränsning istället "
+                "för bara en abstrakt metrik som AUC.\n\n"
+                "**Tenta:** Inget Standards-begrepp, men bygger direkt vidare på cut-off/sensitivitet-"
+                "resonemanget i M1 F11-F14 - bra att kunna koppla ihop om frågan handlar om "
+                "begränsade resurser.",
+            ),
         ],
         formulas=[
             FormulaItem("Sensitivitet", r"Sens = \frac{TP}{TP + FN}", "Andel verkligt sjuka som testet upptäcker"),

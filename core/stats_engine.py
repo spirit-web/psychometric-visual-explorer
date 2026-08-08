@@ -1367,6 +1367,59 @@ def youdens_optimal_threshold(dataset, subscale_id: str | None = None) -> Cutoff
     return best
 
 
+@dataclass
+class CaptureCurveResult:
+    """A capacity-constrained prioritization curve: rank everyone by score
+    (highest first), then ask "if I can only follow up with the top X% of
+    the population, what fraction of the true positive cases have I found?"
+    A steeper early rise than the diagonal means the ranking is doing real
+    work; a curve that tracks the diagonal means ranking by this score is
+    no better than contacting a random subset."""
+
+    pct_contacted: np.ndarray  # 0..1, cumulative fraction of the population, sorted by score desc
+    pct_captured: np.ndarray  # 0..1, cumulative fraction of true positives found at that point
+    n: int
+    n_positive: int
+
+
+def capture_curve(y_true: pd.Series, y_score: pd.Series) -> CaptureCurveResult | None:
+    """Pure, dataset-agnostic capture curve - works identically whether
+    y_score is a raw questionnaire total (Decision Support's baseline) or a
+    trained model's predicted probability (Machine Learning), so the two
+    pages' numbers are directly comparable. Returns None if there's nothing
+    to rank (no data, or no true positives to ever capture)."""
+    paired = pd.concat([y_true.rename("y"), y_score.rename("score")], axis=1).dropna()
+    if paired.empty or paired["y"].sum() == 0:
+        return None
+
+    paired = paired.sort_values("score", ascending=False, kind="mergesort")
+    n = len(paired)
+    n_positive = int(paired["y"].sum())
+    cum_positive = paired["y"].to_numpy().cumsum()
+
+    pct_contacted = np.concatenate([[0.0], np.arange(1, n + 1) / n])
+    pct_captured = np.concatenate([[0.0], cum_positive / n_positive])
+    return CaptureCurveResult(pct_contacted, pct_captured, n, n_positive)
+
+
+def capture_curve_for_dataset(dataset, subscale_id: str | None = None) -> CaptureCurveResult | None:
+    """capture_curve() using the subscale's raw total score - Decision
+    Support's baseline ranking."""
+    paired = _paired_score_outcome(dataset, subscale_id)
+    if paired.empty:
+        return None
+    return capture_curve(paired["outcome"], paired["score"])
+
+
+def capture_rate_at_capacity(result: CaptureCurveResult | None, capacity_pct: float) -> float:
+    """Fraction of true positives captured if you contact exactly the top
+    capacity_pct (0-1) of the ranked population, read off the curve by
+    interpolation."""
+    if result is None:
+        return 0.0
+    return float(np.interp(capacity_pct, result.pct_contacted, result.pct_captured))
+
+
 # --- fairness -------------------------------------------------
 
 FAIRNESS_DIMENSIONS = {

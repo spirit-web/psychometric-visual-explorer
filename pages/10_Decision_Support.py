@@ -81,7 +81,7 @@ with kpi_cols[3]:
 
 st.write("")
 
-tab_overview, tab_cutoffs = st.tabs(["Översikt", "Cut score & tröskelvärden"])
+tab_overview, tab_cutoffs, tab_capacity = st.tabs(["Översikt", "Cut score & tröskelvärden", "Prioritering vid kapacitet"])
 
 with tab_overview:
     lo, hi = q.get_subscale(subscale_id).score_range if subscale_id else (0, 0)
@@ -160,6 +160,42 @@ with tab_cutoffs:
         )
     else:
         st.info("Otillräcklig data för tröskeltabell.")
+
+with tab_capacity:
+    header_cols = st.columns([5, 1])
+    header_cols[0].markdown("**Om en fast tröskel inte räcker: vem prioriterar du?**")
+    with header_cols[1]:
+        concept_tooltip(
+            "Kapacitetsbegränsad prioritering",
+            "En fast tröskel antar att du kan kalla in alla som hamnar över den. I praktiken har du "
+            "ofta ett tak - t.ex. ett visst antal uppföljningstider per månad. Rangordna då alla efter "
+            "poäng (högst risk först) och gå nedåt listan tills kapaciteten är slut, istället för att "
+            "bara fråga ja/nej mot en gräns.",
+            learning_key="Kapacitetsbegränsad prioritering",
+        )
+    st.caption(
+        "Rangordnar alla i datasetet efter totalpoäng (högst först) och visar hur stor andel av de "
+        "verkliga fallen du fångar in om du bara har resurser att kontakta en viss andel av dem."
+    )
+    capacity_pct = st.slider("Kapacitet - andel av populationen du kan kontakta", 1, 100, 15, format="%d%%") / 100
+    curve = se.capture_curve_for_dataset(dataset, subscale_id)
+    if curve is None:
+        st.info("Otillräcklig data för en kapacitetskurva.")
+    else:
+        capture_rate = se.capture_rate_at_capacity(curve, capacity_pct)
+        n_contacted = round(capacity_pct * curve.n)
+        n_captured = round(capture_rate * curve.n_positive)
+        cap_cols = st.columns(3)
+        cap_cols[0].metric("Kontaktar", f"{n_contacted} av {curve.n}")
+        cap_cols[1].metric("Fångar", f"{n_captured} av {curve.n_positive} sanna fall")
+        cap_cols[2].metric("Fångstgrad", f"{capture_rate:.0%}")
+        st.plotly_chart(ve.capture_curve_chart(curve.pct_contacted, curve.pct_captured, capacity_pct), width="stretch")
+        st.caption(
+            "Den streckade linjen är vad ett slumpmässigt urval av samma storlek skulle fånga i "
+            "genomsnitt - avståndet upp till den blå kurvan är vad rangordningen efter poäng "
+            "faktiskt ger dig. Jämför med samma flik på Machine Learning-sidan, som rangordnar efter "
+            "en tränad modells sannolikhet istället för bara totalpoängen."
+        )
 
 st.write("")
 render_export_section(

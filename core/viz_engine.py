@@ -275,6 +275,46 @@ def roc_curve_chart(fpr, tpr, auc: float, operating_point: tuple[float, float] |
     return fig
 
 
+def capture_curve_chart(pct_contacted, pct_captured, capacity_pct: float | None = None) -> go.Figure:
+    """Capacity-constrained prioritization curve: x = fraction of the
+    population contacted (ranked by score, highest first), y = fraction of
+    true positives found so far. The diagonal is what a random subset of
+    the same size would achieve, on average - the gap above it is what the
+    ranking is actually buying you. capacity_pct draws a marker at the
+    chosen "how many can I realistically follow up with" point."""
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=pct_contacted, y=pct_captured, mode="lines", name="Rangordnad prioritering",
+            line=dict(color=COLOR_PRIMARY, width=3),
+        )
+    )
+    fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode="lines", name="Slumpmässigt urval", line=dict(color="#9AA4C7", dash="dash")))
+    if capacity_pct is not None:
+        captured_here = float(np.interp(capacity_pct, pct_contacted, pct_captured))
+        fig.add_trace(
+            go.Scatter(
+                x=[capacity_pct],
+                y=[captured_here],
+                mode="markers",
+                name="Vald kapacitet",
+                marker=dict(color=COLOR_BAD, size=12, symbol="x"),
+            )
+        )
+    fig.update_layout(
+        xaxis_title="Andel av populationen kontaktad",
+        yaxis_title="Andel sanna fall fångade",
+        xaxis_tickformat=".0%",
+        yaxis_tickformat=".0%",
+        height=380,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02),
+        **_LAYOUT_DEFAULTS,
+    )
+    fig.update_xaxes(range=[0, 1])
+    fig.update_yaxes(range=[0, 1])
+    return fig
+
+
 def confusion_matrix_heatmap(tp: int, fp: int, tn: int, fn: int) -> go.Figure:
     z = [[tp, fn], [fp, tn]]
     text = [[f"TP<br>{tp}", f"FN<br>{fn}"], [f"FP<br>{fp}", f"TN<br>{tn}"]]

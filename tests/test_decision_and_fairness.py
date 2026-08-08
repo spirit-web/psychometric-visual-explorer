@@ -90,6 +90,57 @@ def test_cutoff_table_is_monotonic_in_sensitivity():
     assert (table["Sensitivitet"].diff().dropna() <= 1e-9).all()
 
 
+def test_capture_curve_perfect_ranking_captures_everything_immediately():
+    # y_score perfectly separates the classes -> capturing the top n_positive%
+    # of the population must already capture 100% of the true positives.
+    y_true = pd.Series([0, 0, 0, 1, 1, 1, 1, 1])
+    y_score = pd.Series([0.1, 0.2, 0.3, 0.9, 0.8, 0.7, 0.6, 0.5])  # positives all score highest
+    result = se.capture_curve(y_true, y_score)
+    assert result is not None
+    assert result.n == 8
+    assert result.n_positive == 5
+    # at capacity = n_positive/n (0.625), a perfect ranking has captured everyone
+    assert se.capture_rate_at_capacity(result, 5 / 8) == pytest.approx(1.0)
+    # at capacity 0, nobody's been contacted yet
+    assert se.capture_rate_at_capacity(result, 0.0) == pytest.approx(0.0)
+    # at capacity 1 (contact everyone), you've necessarily found all positives
+    assert se.capture_rate_at_capacity(result, 1.0) == pytest.approx(1.0)
+
+
+def test_capture_curve_random_score_tracks_the_diagonal():
+    # an uninformative score (same value for everyone) ranks in insertion
+    # order, so the fraction captured should track the fraction contacted -
+    # the "random selection" baseline the chart draws as a dashed diagonal.
+    rng = np.random.default_rng(9)
+    n = 500
+    y_true = pd.Series(rng.integers(0, 2, n))
+    y_score = pd.Series(np.zeros(n))  # no information at all
+    result = se.capture_curve(y_true, y_score)
+    assert result is not None
+    mid_capture = se.capture_rate_at_capacity(result, 0.5)
+    # with no signal, capturing half the population should capture roughly
+    # half of the true positives (not exact, since ties break by original order)
+    assert mid_capture == pytest.approx(0.5, abs=0.15)
+
+
+def test_capture_curve_none_without_any_true_positives():
+    y_true = pd.Series([0, 0, 0, 0])
+    y_score = pd.Series([0.1, 0.5, 0.3, 0.9])
+    assert se.capture_curve(y_true, y_score) is None
+    assert se.capture_rate_at_capacity(None, 0.5) == 0.0
+
+
+def test_capture_curve_for_dataset_matches_generic_capture_curve():
+    dataset = _dataset(n=600)
+    paired = se._paired_score_outcome(dataset)
+    expected = se.capture_curve(paired["outcome"], paired["score"])
+    actual = se.capture_curve_for_dataset(dataset)
+    assert actual is not None
+    assert actual.n == expected.n
+    assert actual.n_positive == expected.n_positive
+    np.testing.assert_allclose(actual.pct_captured, expected.pct_captured)
+
+
 def test_has_outcome_false_without_column():
     dataset = _dataset()
     dataset.raw = dataset.raw.drop(columns=["outcome_positive"])

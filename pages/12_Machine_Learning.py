@@ -107,8 +107,8 @@ with kpi_cols[3]:
 
 st.write("")
 
-tab_overview, tab_prep, tab_unsup, tab_models, tab_importance, tab_predict = st.tabs(
-    ["Översikt", "Dataförberedelse", "Unsupervised", "Modeller & Utvärdering", "Feature Importance", "Snabbprediktion"]
+tab_overview, tab_prep, tab_unsup, tab_models, tab_importance, tab_capacity, tab_predict = st.tabs(
+    ["Översikt", "Dataförberedelse", "Unsupervised", "Modeller & Utvärdering", "Feature Importance", "Prioritering vid kapacitet", "Snabbprediktion"]
 )
 
 with tab_overview:
@@ -314,6 +314,43 @@ with tab_importance:
             )
         else:
             st.info("SHAP-värden kunde inte beräknas för denna modell.")
+
+with tab_capacity:
+    header_cols = st.columns([5, 1])
+    header_cols[0].markdown("**Kan modellens rangordning slå den enkla totalpoängen?**")
+    with header_cols[1]:
+        concept_tooltip(
+            "Kapacitetsbegränsad prioritering",
+            "Rangordnar alla efter modellens predikterade sannolikhet istället för bara "
+            "totalpoängen, och visar hur stor andel av de verkliga fallen du fångar in om du bara "
+            "har resurser att kontakta en viss andel av populationen. Samma fråga som i Decision "
+            "Support, men med hela svarsmönstret (och ev. demografi) som underlag istället för bara "
+            "en summa.",
+            learning_key="Kapacitetsbegränsad prioritering",
+        )
+    st.caption(
+        f"Rangordnar alla {ml_data.n_samples} personer med fullständig data efter {best_name}s "
+        "predikterade sannolikhet (högst risk först)."
+    )
+    ml_capacity_pct = st.slider("Kapacitet - andel av populationen du kan kontakta", 1, 100, 15, format="%d%%", key="ml_capacity") / 100
+    ml_proba = st.session_state["pve_ml_predictions"]["proba"]
+    ml_curve = se.capture_curve(dataset.raw[se.OUTCOME_COL], ml_proba)
+    if ml_curve is None:
+        st.info("Otillräcklig data för en kapacitetskurva.")
+    else:
+        ml_capture_rate = se.capture_rate_at_capacity(ml_curve, ml_capacity_pct)
+        ml_n_contacted = round(ml_capacity_pct * ml_curve.n)
+        ml_n_captured = round(ml_capture_rate * ml_curve.n_positive)
+        cap_cols = st.columns(3)
+        cap_cols[0].metric("Kontaktar", f"{ml_n_contacted} av {ml_curve.n}")
+        cap_cols[1].metric("Fångar", f"{ml_n_captured} av {ml_curve.n_positive} sanna fall")
+        cap_cols[2].metric("Fångstgrad", f"{ml_capture_rate:.0%}")
+        st.plotly_chart(ve.capture_curve_chart(ml_curve.pct_contacted, ml_curve.pct_captured, ml_capacity_pct), width="stretch", key="ml_capacity_chart")
+        st.caption(
+            "Jämför fångstgraden här med samma kapacitet på Decision Supports motsvarande flik - "
+            "det är den direkta, konkreta jämförelsen mellan att rangordna efter enkel totalpoäng "
+            "och efter en tränad modell."
+        )
 
 with tab_predict:
     st.markdown("**Snabbprediktion**")
