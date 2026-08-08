@@ -17,15 +17,17 @@ st.caption(f"ROC-analys och beslutsstöd för {q.test_name}")
 
 if not se.has_outcome(dataset):
     st.info(
-        "Ingen utfallsvariabel (`outcome_positive`) hittades i datasetet. Decision Support kräver "
-        "en binär kriterievariabel (t.ex. klinisk diagnos) att utvärdera testpoängen mot. "
-        "Exempeldatan innehåller en simulerad sådan variabel."
+        "Ingen bekräftad diagnos (`outcome_positive`) hittades i datasetet. Decision Support kräver "
+        "en binär referens att utvärdera testpoängen mot - t.ex. resultatet av en klinisk "
+        "referensintervju, som den självrapporterade poängen sedan jämförs mot. Exempeldatan "
+        "innehåller en simulerad sådan variabel."
     )
     st.stop()
 
 st.info(
-    "ℹ️ Utfallsvariabeln som används här är **simulerad** för demonstrationssyfte "
-    "(se `data/generate_sample_data.py`) - inte ett riktigt kliniskt facit."
+    "ℹ️ Den bekräftade diagnosen som poängen jämförs mot här (**referensintervjun**) är "
+    "**simulerad** för demonstrationssyfte (se `data/generate_sample_data.py`) - inte ett riktigt "
+    "kliniskt facit."
 )
 
 subscale_options = {s.name: s.id for s in q.subscales} if len(q.subscales) > 1 else {}

@@ -24,7 +24,35 @@ if subscale_options:
 else:
     subscale_id = q.subscales[0].id if q.subscales else None
 
-results = se.all_group_comparisons(dataset, subscale_id)
+# --- Comparison mode: raw score (default, always available) or a trained
+# model's predicted probability (opt-in, only once Machine Learning has
+# been run against this exact dataset - see pages/12_Machine_Learning.py). ---
+ml_predictions = st.session_state.get("pve_ml_predictions")
+model_available = ml_predictions is not None and ml_predictions["dataset_id"] == id(dataset)
+
+score_series = None
+score_label = f"totalpoängen ({q.subscales[0].name if q.subscales else q.test_name})"
+if model_available:
+    compare_mode = st.radio(
+        "Jämför:",
+        ["Total testpoäng (standard)", f"Modellens risksannolikhet ({ml_predictions['model_name']})"],
+        horizontal=True,
+        help="Standardläget jämför testets totalpoäng mellan grupper, som alltid fungerar. Det andra "
+        "läget granskar istället om en tränad modells prioriteringsbeslut är rättvist fördelat - "
+        "kräver att Machine Learning-sidan körts mot samma dataset.",
+    )
+    if compare_mode.startswith("Modellens"):
+        score_series = ml_predictions["proba"]
+        score_label = f"modellens risksannolikhet ({ml_predictions['model_name']})"
+else:
+    st.caption(
+        "ℹ️ Vill du istället granska om en tränad modells beslut är rättvist fördelat (inte bara "
+        "totalpoängen)? Kör Machine Learning-sidan mot detta dataset först, kom sedan tillbaka hit."
+    )
+
+st.caption(f"Jämför just nu: **{score_label}**.")
+
+results = se.all_group_comparisons(dataset, subscale_id, score_series=score_series)
 summary = se.fairness_summary(results)
 
 BIAS_LABELS = {"low": "Låg", "moderate": "Måttlig", "high": "Hög", "none": "Okänd"}
@@ -113,14 +141,15 @@ with tab_overview:
 
     st.write("")
     st.markdown("**Detaljerad tabell**")
+    mean_col_suffix = "sannolikhet" if score_series is not None else "poäng"
     fairness_detail_df = pd.DataFrame(
         [
             {
                 "Dimension": r.dimension,
                 "Referensgrupp": f"{r.reference_group} (n={r.n_reference})",
                 "Jämförelsegrupp": f"{r.comparison_group} (n={r.n_comparison})",
-                "Medel (ref)": round(r.mean_reference, 2),
-                "Medel (jämf.)": round(r.mean_comparison, 2),
+                f"Medel-{mean_col_suffix} (ref)": round(r.mean_reference, 3 if score_series is not None else 2),
+                f"Medel-{mean_col_suffix} (jämf.)": round(r.mean_comparison, 3 if score_series is not None else 2),
                 "Cohen's d": round(r.cohens_d, 3),
             }
             for r in results

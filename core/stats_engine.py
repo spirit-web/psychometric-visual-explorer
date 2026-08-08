@@ -1434,11 +1434,23 @@ class GroupComparisonResult:
     fairness_index: float
 
 
-def group_comparison(dataset, group_series: pd.Series, dimension_label: str, subscale_id: str | None = None) -> list[GroupComparisonResult]:
-    """Cohen's d for every group vs. the largest (reference) group on the
-    subscale's total score."""
-    score = total_score_series(dataset, subscale_id)
-    paired = pd.concat([score, group_series.rename("group")], axis=1).dropna()
+def group_comparison(
+    dataset,
+    group_series: pd.Series,
+    dimension_label: str,
+    subscale_id: str | None = None,
+    score_series: pd.Series | None = None,
+) -> list[GroupComparisonResult]:
+    """Cohen's d for every group vs. the largest (reference) group.
+
+    By default compares the subscale's raw total score (Fairness Explorer's
+    standard mode - unchanged behavior, safe for any dataset). Pass
+    `score_series` to compare something else instead - e.g. a trained
+    model's predicted probability, indexed the same as `dataset.raw` - to
+    audit whether a decision/prediction is distributed fairly across
+    groups rather than just the questionnaire score itself."""
+    score = score_series if score_series is not None else total_score_series(dataset, subscale_id)
+    paired = pd.concat([score.rename("score"), group_series.rename("group")], axis=1).dropna()
     paired.columns = ["score", "group"]
 
     counts = paired["group"].value_counts()
@@ -1471,14 +1483,17 @@ def group_comparison(dataset, group_series: pd.Series, dimension_label: str, sub
     return results
 
 
-def all_group_comparisons(dataset, subscale_id: str | None = None) -> list[GroupComparisonResult]:
-    """Runs group_comparison for every available fairness dimension."""
+def all_group_comparisons(
+    dataset, subscale_id: str | None = None, score_series: pd.Series | None = None
+) -> list[GroupComparisonResult]:
+    """Runs group_comparison for every available fairness dimension. See
+    group_comparison() for what score_series does."""
     results = []
     for key, label in available_fairness_dimensions(dataset).items():
         series = fairness_dimension_series(dataset, key)
         if series is None:
             continue
-        results.extend(group_comparison(dataset, series, label, subscale_id))
+        results.extend(group_comparison(dataset, series, label, subscale_id, score_series=score_series))
     return results
 
 

@@ -138,6 +138,53 @@ def test_group_comparison_recovers_known_mean_difference():
     assert results[0].interpretation == "Stor skillnad"
 
 
+def test_group_comparison_score_series_overrides_the_raw_total():
+    """Fairness Explorer's 'Modellens risksannolikhet' mode: passing
+    score_series must be compared instead of the subscale total, not
+    alongside it - proven here by giving the two a deliberately opposite
+    group difference and checking the sign flips."""
+    rng = np.random.default_rng(5)
+    n = 400
+    q = Questionnaire(
+        plugin_id="demo",
+        plugin_version="1.0",
+        test_name="Demo",
+        full_name="Demo",
+        response_scale=ResponseScale(min=0, max=10),
+        items=[Item(id="D1", text="x", subscale="total", reverse_scored=False)],
+        subscales=[Subscale(id="total", name="Total", item_ids=["D1"], score_range=(0, 10))],
+    )
+    group = pd.Series(rng.choice(["A", "B"], size=n, p=[0.5, 0.5]))
+    # raw total: group A scores higher than B
+    raw_total = pd.Series(np.where(group == "A", rng.normal(12, 2, n), rng.normal(10, 2, n)))
+    # an alternative score (e.g. a model's probability): group B scores higher than A
+    alt_score = pd.Series(np.where(group == "A", rng.normal(0.2, 0.05, n), rng.normal(0.8, 0.05, n)))
+    scored = pd.DataFrame({"total_total": raw_total})
+    raw = pd.DataFrame({"group": group})
+    dataset = Dataset(raw=raw, scored=scored, questionnaire=q, column_mapping={}, demographic_columns=["group"])
+
+    default_results = se.group_comparison(dataset, group, "Grupp")
+    overridden_results = se.group_comparison(dataset, group, "Grupp", score_series=alt_score)
+
+    # reference group is picked by group size alone, so it's identical either way -
+    # only the score being compared changes.
+    assert overridden_results[0].reference_group == default_results[0].reference_group
+    # deliberately constructed with opposite group orderings, so the sign must flip.
+    assert default_results[0].cohens_d * overridden_results[0].cohens_d < 0
+    assert overridden_results[0].mean_reference == pytest.approx(
+        alt_score[group == default_results[0].reference_group].mean(), abs=0.15
+    )
+
+
+def test_all_group_comparisons_passes_score_series_through():
+    dataset = _dataset(n=300)
+    default = se.all_group_comparisons(dataset)
+    alt_score = pd.Series(np.zeros(len(dataset.raw)))  # no variation at all -> d must be exactly 0 everywhere
+    overridden = se.all_group_comparisons(dataset, score_series=alt_score)
+    assert len(default) == len(overridden)
+    assert all(r.cohens_d == 0.0 for r in overridden)
+
+
 def test_available_fairness_dimensions_and_age_binning():
     rng = np.random.default_rng(5)
     n = 100

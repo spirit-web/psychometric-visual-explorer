@@ -405,3 +405,14 @@ def predict_proba_for_vector(model, feature_vector: pd.Series) -> float:
     """Predicted probability of the positive class for a single feature
     row - used for the live 'what if this item answer changed' slider UI."""
     return float(model.predict_proba(feature_vector.to_frame().T)[:, 1][0])
+
+
+def predict_proba_for_all(model, X: pd.DataFrame) -> pd.Series:
+    """Predicted probability of the positive class for every row in X,
+    indexed the same as X (a subset of the original dataset's index - see
+    prepare_ml_data). Used to audit whether a trained model's risk score is
+    distributed fairly across demographic groups (Fairness Explorer's
+    'Modellens risksannolikhet' comparison mode), rather than only ever
+    checking fairness of the raw questionnaire total."""
+    proba = model.predict_proba(X)[:, 1]
+    return pd.Series(proba, index=X.index, name="predicted_probability")

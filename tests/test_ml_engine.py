@@ -170,3 +170,21 @@ def test_predict_proba_for_vector_matches_manual_call():
     expected = float(model.predict_proba(baseline.to_frame().T)[:, 1][0])
     assert proba == pytest.approx(expected)
     assert 0.0 <= proba <= 1.0
+
+
+def test_predict_proba_for_all_matches_index_and_manual_predictions():
+    """Fairness Explorer's 'Modellens risksannolikhet' mode depends on this
+    being indexed exactly like ml_data.X, so it aligns correctly against
+    dataset.raw's demographic columns for the group comparison."""
+    dataset = _dataset(n=200)
+    ml_data = ml.prepare_ml_data(dataset)
+    result = ml.run_all_models(ml_data, model_names=["Logistic Regression"])
+    model = result["Logistic Regression"].model
+
+    proba = ml.predict_proba_for_all(model, ml_data.X)
+    expected = model.predict_proba(ml_data.X)[:, 1]
+
+    assert len(proba) == len(ml_data.X)
+    assert list(proba.index) == list(ml_data.X.index)
+    assert proba.to_numpy() == pytest.approx(expected)
+    assert proba.between(0.0, 1.0).all()

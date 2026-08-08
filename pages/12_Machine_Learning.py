@@ -25,19 +25,20 @@ st.caption(f"Prediktiva insikter och mönsterupptäckt för {q.test_name}")
 
 if not se.has_outcome(dataset):
     st.info(
-        "Ingen målvariabel (`outcome_positive`) hittades i datasetet. Machine Learning-modulen "
-        "kräver en binär målvariabel att träna klassificerare mot. Exempeldatan innehåller en "
-        "simulerad sådan variabel."
+        "Ingen bekräftad diagnos (`outcome_positive`) hittades i datasetet. Machine Learning-modulen "
+        "kräver en binär referens (t.ex. resultatet av en klinisk referensintervju) att träna "
+        "klassificerare mot. Exempeldatan innehåller en simulerad sådan variabel."
     )
     st.stop()
 
 st.info(
-    "ℹ️ Målvariabeln är **simulerad** för demonstrationssyfte (se `data/generate_sample_data.py`). "
-    "Detta är ett pedagogiskt exempel, inte ett kliniskt beslutsstödsverktyg. **Värdet för en "
-    "psykolog:** se vilka svar som bäst förutsäger ett utfall (Feature Importance) och testa "
-    "själv hur en förändrad profil skulle predikteras (Snabbprediktion). **Värdet för en "
-    "forskare/student:** en fullständig ML-pipeline - dataförberedelse, unsupervised (PCA/kluster), "
-    "flera icke-linjära modeller inklusive ett neuralt nätverk, och en fullständig utvärdering."
+    "ℹ️ Den bekräftade diagnosen (**referensintervjun**) modellerna tränas mot är **simulerad** för "
+    "demonstrationssyfte (se `data/generate_sample_data.py`). Detta är ett pedagogiskt exempel, "
+    "inte ett kliniskt beslutsstödsverktyg. **Värdet för en psykolog:** se vilka svar som bäst "
+    "förutsäger den bekräftade diagnosen (Feature Importance) och testa själv hur en förändrad "
+    "profil skulle predikteras (Snabbprediktion). **Värdet för en forskare/student:** en "
+    "fullständig ML-pipeline - dataförberedelse, unsupervised (PCA/kluster), flera icke-linjära "
+    "modeller inklusive ett neuralt nätverk, och en fullständig utvärdering."
 )
 
 ml_data = ml.prepare_ml_data(dataset)
@@ -55,6 +56,16 @@ def _cached_run_all_models(X: pd.DataFrame, y: pd.Series, seed: int = 42):
 results = _cached_run_all_models(ml_data.X, ml_data.y)
 best_name = ml.best_model_name(results)
 best = results[best_name]
+
+# Makes the best model's risk score available to Fairness Explorer's
+# "Modellens risksannolikhet" comparison mode. Keyed by id(dataset) so a
+# newly loaded or re-scored (Test Builder) dataset never picks up a stale
+# prediction computed against different data.
+st.session_state["pve_ml_predictions"] = {
+    "dataset_id": id(dataset),
+    "model_name": best_name,
+    "proba": ml.predict_proba_for_all(best.model, ml_data.X),
+}
 
 _ITEM_LABELS = {item.id: f"{item.id} – {item.text}" for item in q.items}
 
@@ -351,7 +362,7 @@ with tab_predict:
             with col_result:
                 st.metric("Predikterad sannolikhet", f"{proba:.2f}")
                 st.metric("Predikterad klass", predicted_class)
-                st.metric("Faktiskt utfall (simulerat)", actual_class)
+                st.metric("Bekräftad diagnos (simulerad referensintervju)", actual_class)
                 if actual is not None:
                     if predicted_class == actual_class:
                         st.success("✅ Modellen predikterade rätt klass för denna person.")
