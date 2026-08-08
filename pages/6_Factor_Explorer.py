@@ -13,6 +13,11 @@ from utils.session import require_dataset
 dataset = require_dataset()
 q = dataset.questionnaire
 
+st.markdown(
+    "<style>.block-container{padding-top:1rem;} "
+    "[data-testid='stVerticalBlock']{gap:0.5rem;}</style>",
+    unsafe_allow_html=True,
+)
 st.title("Factor Explorer")
 st.caption(f"Utforska underliggande faktorer i {q.test_name}")
 
@@ -27,14 +32,10 @@ n_factors = st.number_input(
     max_value=max_k,
     value=min(default_k, max_k),
     help="Förvalt värde är antalet delskalor i testdefinitionen. Parallel analysis nedan ger ett "
-    "empiriskt förslag baserat på dina data.",
-)
-st.caption(
-    "Varför skiljer sig antalet faktorer mellan test? Dels beror det på hur testet är konstruerat "
-    "- t.ex. är IPIP Big Five designat för att mäta 5 oberoende dimensioner, medan GAD-7 är "
-    "designat som en enda dimension (ångest). Dels beror det på vad dina data faktiskt visar, via "
-    "Parallel analysis nedan. Om det föreslagna antalet skiljer sig från testets originaldesign kan "
-    "det bero på urvalsstorlek eller sammansättning - testa gärna olika värden ovan."
+    "empiriskt förslag baserat på dina data. Varför skiljer sig antalet mellan test? Dels beror det "
+    "på hur testet är konstruerat - t.ex. är IPIP Big Five designat för att mäta 5 oberoende "
+    "dimensioner, medan GAD-7 är designat som en enda dimension (ångest). Dels beror det på vad "
+    "dina data faktiskt visar, via Parallel analysis nedan.",
 )
 efa = se.efa_fit(dataset, int(n_factors))
 
@@ -44,8 +45,6 @@ if efa is not None and efa.fit.rmsea is not None:
         st.success("✅ God modellpassning. Modellen visar bra passform till data.")
     else:
         st.warning("⚠️ Måttlig modellpassning. Överväg ett annat antal faktorer ovan.")
-
-st.write("")
 
 # --- KPI row -------------------------------------------------
 kpi_cols = st.columns(4)
@@ -77,8 +76,6 @@ with kpi_cols[3]:
         tooltip="Testar om frågorna korrelerar tillräckligt med varandra för att faktoranalys ska vara meningsfull. Ett lågt p-värde (< .05) är det önskade utfallet här.",
         learning_key="KMO & Bartlett's test",
     )
-
-st.write("")
 
 tab_overview, tab_loadings, tab_corr, tab_fit = st.tabs(["Översikt", "Faktorladdningar", "Korrelationer", "Model Fit"])
 
@@ -123,7 +120,8 @@ with tab_overview:
         if efa is not None:
             preview = efa.loadings.copy()
             preview.insert(0, "Fråga", [next(i.text for i in q.items if i.id == iid) for iid in preview.index])
-            st.dataframe(preview.round(2), width="stretch", height=320)
+            table_height = min(38 + 35 * (len(preview) + 1), 400)
+            st.dataframe(preview.round(2), width="stretch", height=table_height)
         else:
             st.info("Ingen EFA-lösning tillgänglig.")
 

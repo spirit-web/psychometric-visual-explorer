@@ -12,8 +12,8 @@ from utils.session import require_dataset
 dataset = require_dataset()
 q = dataset.questionnaire
 
+st.markdown("<style>.block-container{padding-top:1rem;}</style>", unsafe_allow_html=True)
 st.title("Decision Support")
-st.caption(f"ROC-analys och beslutsstöd för {q.test_name}")
 
 if not se.has_outcome(dataset):
     st.info(
@@ -23,12 +23,6 @@ if not se.has_outcome(dataset):
         "innehåller en simulerad sådan variabel."
     )
     st.stop()
-
-st.info(
-    "ℹ️ Den bekräftade diagnosen som poängen jämförs mot här (**referensintervjun**) är "
-    "**simulerad** för demonstrationssyfte (se `data/generate_sample_data.py`) - inte ett riktigt "
-    "kliniskt facit."
-)
 
 subscale_options = {s.name: s.id for s in q.subscales} if len(q.subscales) > 1 else {}
 if subscale_options:
@@ -52,7 +46,9 @@ with kpi_cols[0]:
         "📈", "#DBEAFE", f"{roc.auc:.2f}", "AUC", caption=f"95% KI: {ci_text}" if ci_text else None,
         tooltip="Area Under the Curve - sammanfattar testets förmåga att skilja mellan de med och utan "
         "utfallet, över alla möjliga trösklar samtidigt. 0.5 = slumpnivå, 1.0 = perfekt särskiljning. "
-        "≥0.80 anses bra, ≥0.70 acceptabelt.",
+        "≥0.80 anses bra, ≥0.70 acceptabelt. Den bekräftade diagnosen som poängen jämförs mot här "
+        "(**referensintervjun**) är **simulerad** för demonstrationssyfte (se "
+        "`data/generate_sample_data.py`) - inte ett riktigt kliniskt facit.",
         learning_key="ROC-kurva & AUC",
     )
 with kpi_cols[1]:
@@ -123,10 +119,12 @@ with tab_overview:
             st.plotly_chart(ve.confusion_matrix_heatmap(metrics.tp, metrics.fp, metrics.tn, metrics.fn), width="stretch")
 
     if metrics is not None:
-        st.write("")
-        header_cols = st.columns([5, 1])
-        header_cols[0].markdown("**Prestandamått vid vald tröskel**")
-        with header_cols[1]:
+        metric_cols = st.columns([1, 1, 1, 1, 0.3])
+        metric_cols[0].metric("Sensitivitet (TPR)", f"{metrics.sensitivity:.2f}")
+        metric_cols[1].metric("Specificitet (TNR)", f"{metrics.specificity:.2f}")
+        metric_cols[2].metric("PPV (Precision)", f"{metrics.ppv:.2f}")
+        metric_cols[3].metric("NPV", f"{metrics.npv:.2f}")
+        with metric_cols[4]:
             concept_tooltip(
                 "PPV & NPV",
                 "PPV (Precision): av alla som testet flaggar som positiva, hur många har verkligen "
@@ -135,11 +133,6 @@ with tab_overview:
                 "i populationen (prevalens) - samma test kan ge olika PPV/NPV i olika grupper.",
                 learning_key="PPV / NPV",
             )
-        metric_cols = st.columns(4)
-        metric_cols[0].metric("Sensitivitet (TPR)", f"{metrics.sensitivity:.2f}")
-        metric_cols[1].metric("Specificitet (TNR)", f"{metrics.specificity:.2f}")
-        metric_cols[2].metric("PPV (Precision)", f"{metrics.ppv:.2f}")
-        metric_cols[3].metric("NPV", f"{metrics.npv:.2f}")
 
 with tab_cutoffs:
     header_cols = st.columns([5, 1])
